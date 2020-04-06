@@ -1,4 +1,3 @@
-
 class Sixer () : 
 
     def __init__ (self, init, params) :
@@ -8,12 +7,13 @@ class Sixer () :
         self.te = params['te']
 
         self.k0 = params['k0']
+        self.kt = params['kt']
         self.mu = params['mu']
 
-        self.beta = params['beta']
+        self.beta  = params['beta']
         self.beta1 = params['beta1']
 
-        self.sigma = params['sigma']
+        self.sigma  = params['sigma']
         self.gamma1 = params['gamma1']
         self.gamma2 = params['gamma2']
         self.gamma3 = params['gamma3']
@@ -32,7 +32,7 @@ class Sixer () :
 
         factor = (i + a + b1 * xa + b2 * xi + b3 * p)
 
-        ds = -self.beta * factor * s/self.n \
+        ds = -self.beta * factor * s/self.N \
                 - k0 * s \
                 + mu * xs
         da = self.beta * factor * s/self.N \
@@ -47,9 +47,9 @@ class Sixer () :
                 - xa * (self.sigma + self.gamma1 + mu) \
                 + k0 * a 
         dxi = self.sigma * xa \
-                - xi * (kt + mu + self.gamma2) \
+                - xi * (self.kt + mu + self.gamma2) \
                 + k0 * i
-        dp = kt * (i + xi) - self.gamma3 * p
+        dp = self.kt * (i + xi) - self.gamma3 * p
         dr = self.gamma1 * (a + xa) \
                 + self.gamma2 * (i + xi) \
                 + self.gamma3 * p

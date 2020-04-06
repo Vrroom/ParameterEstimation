@@ -140,11 +140,3 @@ ax.set_ylabel('Number(\% pop)')
 legend = ax.legend()
 legend.get_frame().set_alpha(0.5)
 plt.show()
-
-# for i in range(5, 8):#range(len(losses)):
-#     print('\t'.join([str(int(x)) for x in losses[i]]))
-print(bestLoss)
-print(bestPreds[0][210])
-print(bestPreds[0][220])
-
-bestPreds[0][:10]
