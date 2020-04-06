@@ -1,19 +1,19 @@
 import more_itertools
-import csv
+import pandas
 import numpy as np
+from itertools import product
 
 def getInfectedAndRecovered(csvFile):
-    with open(csvFile) as fd :
-        reader = csv.reader(fd)
-        confirmedOffset, recoveredOffset, deadOffset = 0, 0, 0
-        i, r = [], []
-        for row in reader:
-            confirmed = int(row[2]) - confirmedOffset
-            recovered = int(row[4]) - recoveredOffset
-            dead = int(row[6]) - deadOffset
-            r.append(recovered + dead)
-            i.append(confirmed - r[-1])
-    return np.array([i, r])
+    data = pandas.read_csv()
+    confirmed = data['Total Cases']
+    recovered = data['Total Recoveries']
+    dead      = data['Total Deaths']
+    r = recovered + dead
+    i = confirmed - r
+    return pandas.concat((i, r), axis=1).to_numpy()
 
 def sortAndFlattenDict(d) : 
     return list(unzip(sorted(d.items()))[1])
+
+def dictProduct (d) : 
+    return map(dict, product(*map(lambda x : product([x[0]], x[1]), d.items())))
