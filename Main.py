@@ -6,21 +6,21 @@ import pandas
 
 if __name__ == "__main__" : 
     paramRanges = {
-        'tl'    : [10], 
-        'te'    : [31],
+        'tl'    : [21], 
+        'te'    : [42],
         'k0'    : [1/7], 
         'kt'    : [0.075],
         'mu'    : [1/7],
-        'sigma' : np.arange(0, 0.5, 0.25),
+        'sigma' : np.arange(0, 0.5, 0.05),
         'gamma1': [1/19],
         'gamma2': [1/14],
         'gamma3': [1/14],
         'N'     : [1.1e8],
-        'beta'  : np.arange(0, 1, 0.25),
-        'beta1' : np.arange(0, 1, 0.25)
+        'beta'  : np.arange(0, 1, 0.05),
+        'beta1' : np.arange(0, 1, 0.05)
     }
-    I0  = np.arange(1, 5000, 1000)
-    A0  = np.arange(0, 5000, 1000)
+    I0  = np.arange(1, 5000, 500)
+    A0  = np.arange(0, 5000, 500)
     Xs0 = [0]
     Xa0 = [0]
     Xi0 = [0]

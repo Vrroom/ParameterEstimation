@@ -4,6 +4,8 @@ from Simulate import *
 from Model import * 
 from Search import *
 from multiprocessing import Process, Pipe, cpu_count
+from multiprocessing import connection
+connection.BUFSIZE = 2 ** 16
 import math
 
 def gridSearch (ivRanges, paramRanges, groundTruth, lossFunction, T) :
@@ -42,8 +44,8 @@ def worker (conn, groundTruth, lossFunction, T) :
 
     while True : 
         item = conn.recv() 
-        if item == b'e' : 
-            conn.send(b'e')
+        if item == 'e' : 
+            conn.send('e')
             break
         else : 
             point, minLoss = item
@@ -60,9 +62,7 @@ def worker (conn, groundTruth, lossFunction, T) :
             if loss < minLoss: 
                 conn.send((point, loss))
             else : 
-                conn.send(b'n')
-
-    conn.close()
+                conn.send('n')
 
 def parallelGridSearch (ivRanges, paramRanges, groundTruth, lossFunction, T) :
     totalChildren = cpu_count()
@@ -101,11 +101,11 @@ def parallelGridSearch (ivRanges, paramRanges, groundTruth, lossFunction, T) :
             hasSomething = conn.poll()
             if hasSomething : 
                 obj = conn.recv() 
-                if obj == b'e' :
+                if obj == 'e' :
                     # This signals that the child
                     # is done.
                     doneChildren += 1
-                elif obj != b'n' : 
+                elif obj != 'n' : 
                     # This signals that the child
                     # found an improving grid point.
                     point, loss = obj
@@ -113,16 +113,16 @@ def parallelGridSearch (ivRanges, paramRanges, groundTruth, lossFunction, T) :
                         minX0, minParams = point
                         minLoss = loss
 
-            # Sentinel to guard against the 
-            # possibility of querying an empty generator.
-            point = next(points, False)
+                # Sentinel to guard against the 
+                # possibility of querying an empty generator.
+                point = next(points, False)
 
-            if point : 
-                conn.send((point, minLoss))
-            else : 
-                # If no more points are left, signal
-                # to the child.
-                conn.send(b'e')
+                if point : 
+                    conn.send((point, minLoss))
+                else : 
+                    # If no more points are left, signal
+                    # to the child.
+                    conn.send('e')
 
     # Join all child processes.
     for p in processes : 
