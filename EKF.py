@@ -30,8 +30,9 @@ def step(x) :
 def extendedKalmanFilter (updateStep, x0, P0, H, R, z, tMax) :
     xPrev = x0
     PPrev = P0
-    newEstimates = [x0]
-    
+    xs = [x0]
+    Ps = [P0]
+        
     for t in range(1, tMax) : 
         # Time update
         xtMinus = updateStep(xPrev, t)
@@ -46,9 +47,10 @@ def extendedKalmanFilter (updateStep, x0, P0, H, R, z, tMax) :
         xPrev = xt
         PPrev = Pt
         
-        newEstimates.append(xt)
+        xs.append(xt)
+        Ps.append(Pt)
 
-    return np.stack(newEstimates)
+    return np.stack(xs), Ps
 
 if __name__ == "__main__" : 
     x0 = np.array([1., 1.])

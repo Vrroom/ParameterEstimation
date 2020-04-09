@@ -24,29 +24,38 @@ def getModel () :
     return Sixer(params)
 
 if __name__ == "__main__" : 
-    startDate = '29 Feb'
+    T = 70
     N   = 1e8
     A0, I0 = 1, 1
     init = np.array([N - A0 - I0, A0, I0, 0, 0, 0, 0, 0])
 
-    data = pandas.read_csv('./Data/maha_data.csv')
-    firstDeathIdx = data[data['Total Deaths'] > 0].index[0]
-    deaths = data['New Deaths'][firstDeathIdx:].to_numpy()
-    days = deaths.size
-    model = getModel()
-    R = 1
-    P0 = np.diag([100, 100, 100, 1e-3, 1e-3, 1e-3, 1e-3, 1e-3])
-    H = np.array([[0, 1, 1, 1, 1, 1, 1, 0]]) * 0.02
-    active = data['Total Cases'] - data['Total Recoveries'] - data['Total Deaths']
-    active = active.to_numpy()
-    xs = extendedKalmanFilter(model.timeUpdate, init, P0, H, R, deaths, days)
-    predictedNewDeaths = xs @ H.T
-    print (xs)
-    plt.scatter(range(17, 17 + days), deaths, c='violet', label='new deaths (mar 17 onwards)')
-    plt.plot(range(17, 17 + days), predictedNewDeaths, c='red', label='predicted new deaths (mar 17 onwards)')
-    plt.plot(range(days), xs[:,2] + xs[:,5], c='blue', label='predicted infected')
-    plt.plot(range(days), xs[:,1] + xs[:,4], c='yellow', label='predicted asymptomatic')
-    plt.plot(range(14, 14 + active.size), active, c='green', label='active cases')
+    A0_, I0_ = 50, 20
+    init_ = np.array([N - A0_ - I0_, A0_, I0_, 0, 0, 0, 0, 0])
+    print(init, init_)
 
+    model = getModel()
+
+    xs = simulator(model, init, np.arange(T))[:-17]
+
+    deaths = (xs[:,2] + xs[:,-2]) * 0.02
+    days = deaths.size
+
+    R = 50
+    P0 = np.diag([1e4, 1e4, 1e4, 1e-3, 1e-3, 1e-3, 1e-3, 1e-3])
+    H = np.array([[0, 0, 1, 0, 0, 0, 1, 0]]) * 0.02
+    xs_, Ps_ = extendedKalmanFilter(model.timeUpdate, init_, P0, H, R, deaths, days)
+    print(xs_[0])
+
+
+    istd = np.sqrt(np.array([np.diag(P)[-2] for P in Ps_]))
+    i   = np.array([x[-2] for x in xs])
+    i_  = np.array([x[-2] for x in xs_])
+    
+    plt.plot(np.arange(days), i_ - istd, c='orange', label='Lower Bound on I')
+    plt.plot(np.arange(days), i_ + istd, c='red', label='Upper Bound on I')
+    plt.plot(np.arange(days), i, c='blue', label='True I')
+    plt.plot(np.arange(days), i_, c='green', label='Estimate I')
     plt.legend()
     plt.show()
+
+
