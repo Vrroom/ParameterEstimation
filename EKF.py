@@ -1,4 +1,5 @@
 import torch
+from functools import partial
 from Model import *
 import numpy as np
 import matplotlib.pyplot as plt
@@ -33,8 +34,8 @@ def extendedKalmanFilter (updateStep, x0, P0, H, R, z, tMax) :
     
     for t in range(1, tMax) : 
         # Time update
-        xtMinus = updateStep(xPrev)
-        A = getJacobian(updateStep, torch.from_numpy(xPrev))
+        xtMinus = updateStep(xPrev, t)
+        A = getJacobian(partial(updateStep, t=t), torch.from_numpy(xPrev))
         PMinus = A @ PPrev @ A.T 
 
         # Measurement update
