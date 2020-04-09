@@ -1,11 +1,10 @@
 from itertools import product
 from functools import partial
+import time
 from Simulate import *
 from Model import * 
 from Search import *
 from multiprocessing import Process, Pipe, cpu_count
-from multiprocessing import connection
-connection.BUFSIZE = 2 ** 16
 import math
 
 def gridSearch (ivRanges, paramRanges, groundTruth, lossFunction, T) :
@@ -93,6 +92,10 @@ def parallelGridSearch (ivRanges, paramRanges, groundTruth, lossFunction, T) :
     for p, _ in connections : 
         p.send((next(points), minLoss))
 
+    nProcessed = 0
+    power = 1
+    st = time.time()
+
     while doneChildren < totalChildren : 
 
         # Poll all connections and 
@@ -116,6 +119,11 @@ def parallelGridSearch (ivRanges, paramRanges, groundTruth, lossFunction, T) :
                 # Sentinel to guard against the 
                 # possibility of querying an empty generator.
                 point = next(points, False)
+
+                nProcessed += 1
+                if nProcessed % (10 ** power) == 0 : 
+                    print(nProcessed, time.time() - st)
+                    power += 1
 
                 if point : 
                     conn.send((point, minLoss))

@@ -1,8 +1,8 @@
+import torch
+
 class Sixer () : 
 
-    def __init__ (self, init, params) :
-        self.init = init
-
+    def __init__ (self, params) :
         self.tl = params['tl']
         self.te = params['te']
 
@@ -20,8 +20,8 @@ class Sixer () :
         
         self.N = params['N']
         
-    def dx (self, y, t) : 
-        s, a, i, xs, xa, xi, p, r = y
+    def dx (self, x, t) : 
+        s, a, i, xs, xa, xi, p, r = x
 
         k0 = 0 if t < self.tl or t > self.te else self.k0
         mu = self.mu if t > self.te else 0
@@ -55,3 +55,9 @@ class Sixer () :
                 + self.gamma3 * p
         return ds, da, di, dxs, dxa, dxi, dp, dr
 
+    def timeUpdate (self, x, t) : 
+        dx = self.dx(x, t)
+        if torch.is_tensor(x) : 
+            return (torch.stack(dx) + x)
+        else : 
+            return (np.stack(dx) + x)
