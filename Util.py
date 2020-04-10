@@ -4,7 +4,57 @@ import pandas
 import sys
 import numpy as np
 from itertools import product
+import datetime
 import os
+
+class DateIter () : 
+    def __init__ (self, start, end) :
+        self.start = start
+        self.end = end
+    
+    def __iter__ (self) : 
+        return self
+
+    def __next__ (self) : 
+        curr = self.start
+        if self.start.date != self.end.date :
+            self.start = self.start + 1
+            return curr
+        else : 
+            raise StopIteration()
+
+class Date () : 
+
+    MONTHS = ['Jan', 'Feb', 'Mar', 
+            'Apr', 'May', 'Jun', 
+            'Jul', 'Aug', 'Sep', 
+            'Oct', 'Nov', 'Dec']
+    
+    def __init__ (self, date) : 
+        self.date = date
+        d, m  = date.split(' ')
+        d = int(d)
+        self.day = d
+        self.month = self.MONTHS.index(m) + 1
+
+    def __add__ (self, n) : 
+        td = datetime.timedelta(days=n)
+        newDate = datetime.date(2020, self.month, self.day) + td
+        month = self.MONTHS[newDate.month - 1]
+        day = newDate.day
+        return Date(f'{day} {month}')
+
+    def __lt__ (self, that) : 
+        return (self.month, self.day) < (that.month, that.day)
+        
+    def __gt__ (self, that) : 
+        return (self.month, self.day) > (that.month, that.day)
+    
+    def __le__ (self, that) : 
+        return (self.month, self.day) <= (that.month, that.day)
+        
+    def __ge__ (self, that) : 
+        return (self.month, self.day) >= (that.month, that.day)
 
 def fileno(file_or_fd):
     fd = getattr(file_or_fd, 'fileno', lambda: file_or_fd)()
@@ -53,3 +103,4 @@ def sortAndFlattenDict(d) :
 
 def dictProduct (d) : 
     return map(dict, product(*map(lambda x : product([x[0]], x[1]), d.items())))
+
