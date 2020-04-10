@@ -1,5 +1,6 @@
 import torch
 from functools import partial
+from Util import *
 from Model import *
 import numpy as np
 import matplotlib.pyplot as plt
@@ -27,28 +28,31 @@ def step(x) :
     else :
         return A @ x
 
-def extendedKalmanFilter (updateStep, x0, P0, H, R, z, tMax) :
+def extendedKalmanFilter (updateStep, x0, P0, H, R, z, tStart, tEnd) :
     xPrev = x0
     PPrev = P0
-    newEstimates = [x0]
-    
-    for t in range(1, tMax) : 
+    xs = [x0]
+    Ps = [P0]
+        
+    for i, date in enumerate(DateIter(tStart + 1, tEnd)) :
         # Time update
-        xtMinus = updateStep(xPrev, t)
-        A = getJacobian(partial(updateStep, t=t), torch.from_numpy(xPrev))
+        xtMinus = updateStep(xPrev, i+1)
+        A = getJacobian(partial(updateStep, t=i+1), torch.from_numpy(xPrev))
         PMinus = A @ PPrev @ A.T 
 
         # Measurement update
-        K = PMinus @ H.T @ np.linalg.inv(H @ PMinus @ H.T + R)
-        xt = xtMinus + K @ (z[t] - H @ xtMinus)
-        Pt = (np.eye(PPrev.shape[0]) - K @ H) @ PMinus
+        h = H(date)
+        K = PMinus @ h.T @ np.linalg.inv(h @ PMinus @ h.T + R)
+        xt = xtMinus + K @ (z[i] - h @ xtMinus)
+        Pt = (np.eye(PPrev.shape[0]) - K @ h) @ PMinus
 
         xPrev = xt
         PPrev = Pt
         
-        newEstimates.append(xt)
+        xs.append(xt)
+        Ps.append(Pt)
 
-    return np.stack(newEstimates)
+    return np.stack(xs), Ps
 
 if __name__ == "__main__" : 
     x0 = np.array([1., 1.])
