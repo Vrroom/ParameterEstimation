@@ -43,6 +43,11 @@ class Date () :
         month = self.MONTHS[newDate.month - 1]
         day = newDate.day
         return Date(f'{day} {month}')
+    
+    def __sub__ (self, that) :
+        d1 = datetime.date(2020, self.month, self.day)
+        d2 = datetime.date(2020, that.month, that.day)
+        return (d1 - d2).days
 
     def __lt__ (self, that) : 
         return (self.month, self.day) < (that.month, that.day)
