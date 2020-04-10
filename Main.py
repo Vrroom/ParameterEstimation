@@ -8,8 +8,8 @@ import pandas
 
 def getModel () : 
     params = {
-        'tl'    : 10, 
-        'te'    : 20,
+        'tl'    : 40, 
+        'te'    : 42,
         'k0'    : 1/7, 
         'kt'    : 0.075,
         'mu'    : 1/7,
@@ -31,7 +31,6 @@ if __name__ == "__main__" :
         d   = np.array([x[idx] for x in xs])
         d_  = np.array([x[idx] for x in xs_])
         
-        print(dstd)
         x = np.arange(days)
         plt.plot(x, d , c='red' , label=f'True {names[idx]}')
         plt.plot(x, d_, c='blue', label=f'Estimate {names[idx]}')
@@ -40,26 +39,14 @@ if __name__ == "__main__" :
         plt.show()
 
     names = ['S', 'E', 'A', 'I', 'Xs', 'Xe', 'Xa', 'Xi', 'P', 'R']
-    T = 40
+    T = 36
     N   = 1.1e8
-    E0, A0, I0 = 28, 238, 1
-    init = np.array([N - E0 - A0 - I0, E0, A0, I0, 0, 0, 0, 0, 0, 0])
-
-    E0_, A0_, I0_ = 50, 200, 1
-    init_ = np.array([N - E0_ - A0_ - I0_, E0, A0_, I0_, 0, 0, 0, 0, 0, 0])
-
+    E0, A0, I0, P0 = 28, 238, 0, 14
+    init = [N - E0 - A0 - I0 - P0, E0, A0, I0, 0, 0, 0, 0, P0, 0]
     model = getModel()
 
-    xs = simulator(model, init, np.arange(0, T))[:-17]
-    print(xs[:,0])
-    print(xs[:,1])
+    t = np.linspace(0, T, 10 * T)
+    xs = simulator(model, init, t)
+    plt.plot(t, xs[:, -2])
+    plt.show()
 
-    deaths = (xs[:,3] + xs[:,-2]) * 0.02
-    days = deaths.size
-
-    R = 5
-    P0 = np.diag([150**2, 50**2, 50**2, 50**2, 1, 1, 1, 1, 1, 1])
-    H = np.array([[0, 0, 0, 1, 0, 0, 0, 0, 1, 0]]) * 0.02
-    xs_, Ps_ = extendedKalmanFilter(model.timeUpdate, init_, P0, H, R, deaths, days)
-
-    # pltColumn(2)

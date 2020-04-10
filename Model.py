@@ -58,6 +58,7 @@ class Spaxire () :
         dr = self.gamma1 * (e + xe) \
                 + self.gamma2 * (i + xi) \
                 + self.gamma3 * p
+        print(ds, de, da, di, dxs, dxe, dxa, dxi, dp, dr)
         return ds, de, da, di, dxs, dxe, dxa, dxi, dp, dr
 
     def timeUpdate (self, x, t) : 
