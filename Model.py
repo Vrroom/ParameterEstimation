@@ -61,14 +61,16 @@ class Spaxire () :
         dr = self.gamma1 * (e + xe) \
                 + self.gamma2 * (i + xi) \
                 + self.gamma3 * p
-        dbeta = 0
-        dbeta1 = 0
+        dbeta  = 0.
+        dbeta1 = 0.
 
         return ds, de, da, di, dxs, dxe, dxa, dxi, dp, dr, dbeta, dbeta1
 
     def timeUpdate (self, x, t) : 
         dx = self.dx(x, t)
         if torch.is_tensor(x) : 
-            return (torch.stack(dx) + x)
+            states  = torch.stack(dx[:-2])
+            betas = torch.tensor(dx[-2:], dtype=torch.double)
+            return (torch.cat((states, betas)) + x)
         else : 
             return (np.stack(dx) + x)

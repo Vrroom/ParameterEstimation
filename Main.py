@@ -1,6 +1,8 @@
 from Model import *
 from Search import *
 from Losses import *
+import matplotlib.ticker as ticker
+import matplotlib.pyplot as plt
 from itertools import product
 from EKF import *
 import numpy as np
@@ -46,7 +48,10 @@ if __name__ == "__main__" :
 
         plt.plot(x, d_, c=c, label=f'Estimate {name}')
         plt.fill_between(x, np.maximum(d_ - dstd, 0), d_ + dstd, alpha=0.5, facecolor='grey')
-        plt.legend()
+
+        dates = list(map(lambda d : d.date, DateIter(startDate, endDate)))[::2]
+        plt.xticks(x[::2], dates, rotation='vertical')
+        
 
     def H (date) : 
         h1    = [0,0,0,.02,0,0,0,0,.02,0,0,0]
@@ -79,13 +84,15 @@ if __name__ == "__main__" :
     model = getModel()
 
     R = np.diag([1, 1])
-    P0 = np.diag([1e3, 1e3, 1e3, 1e3, 1e-2, 1e-2, 1e-2, 1e-2, 1e-2, 1e-2, 1, 1])
+    P0 = np.diag([1e3, 1e3, 1e3, 1e3, 1e-2, 1e-2, 1e-2, 1e-2, 1e-2, 1e-2, 0.5, 0.5])
 
     xs_, Ps_ = extendedKalmanFilter(model.timeUpdate, init, P0, H, R, zs, startDate, endDate)
 
+    print(xs_[:, -2])
     plt.scatter(np.arange(T), P, c='red', label='P (Actual Data)')
     pltColumn(-1)
     pltColumn(-2)
-    pltColumn(-3)
+    pltColumn(-4)
+    plt.legend()
     plt.show()
 
