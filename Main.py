@@ -1,4 +1,5 @@
 from Model import *
+from Util import *
 from Search import *
 from Losses import *
 import matplotlib.ticker as ticker
@@ -79,20 +80,22 @@ if __name__ == "__main__" :
     zs = np.stack([deaths, P[:]]).T
 
     E0, A0, I0 = 25, 25, 25
-    init = np.array([N-E0-A0-I0, E0, A0, I0, 0, 0, 0, 0, 0, 0, 0.5, 1])
+    init = np.array([N-E0-A0-I0, E0, A0, I0, 0, 0, 0, 0, 0, 0, 0, 0])
 
     model = getModel()
 
     R = np.diag([1, 1])
-    P0 = np.diag([1e3, 1e3, 1e3, 1e3, 1e-2, 1e-2, 1e-2, 1e-2, 1e-2, 1e-2, 0.5, 0.5])
+    P0 = np.diag([1e3, 1e3, 1e3, 1e3, 1e-2, 1e-2, 1e-2, 1e-2, 1e-2, 1e-2, 1, 1])
 
     xs_, Ps_ = extendedKalmanFilter(model.timeUpdate, init, P0, H, R, zs, startDate, endDate)
 
-    print(xs_[:, -2])
-    plt.scatter(np.arange(T), P, c='red', label='P (Actual Data)')
+    xs_[:,-2] = sigmoid(xs_[:,-2])
+    xs_[:,-1] = sigmoid(xs_[:,-1])
+
+    # plt.scatter(np.arange(T), P, c='red', label='P (Actual Data)')
     pltColumn(-1)
     pltColumn(-2)
-    pltColumn(-4)
+    # pltColumn(-4)
     plt.legend()
     plt.show()
 

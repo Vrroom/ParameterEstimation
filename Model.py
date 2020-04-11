@@ -1,4 +1,5 @@
 import torch
+from Util import *
 import numpy as np
 
 class Spaxire () : 
@@ -29,7 +30,10 @@ class Spaxire () :
                 'violet', 'hotpink', 'bisque']
         
     def dx (self, x, t) : 
-        s, e, a, i, xs, xe, xa, xi, p, r, beta, beta1 = x
+        s, e, a, i, xs, xe, xa, xi, p, r, theta, theta1 = x
+        
+        beta  = sigmoid(theta)
+        beta1 = 2 * sigmoid(theta1)
 
         k0 = 0 if t < self.tl or t > self.te else self.k0
         mu = self.mu if t > self.te else 0
@@ -61,10 +65,10 @@ class Spaxire () :
         dr = self.gamma1 * (e + xe) \
                 + self.gamma2 * (i + xi) \
                 + self.gamma3 * p
-        dbeta  = 0.
-        dbeta1 = 0.
+        dtheta  = 0.
+        dtheta1 = 0.
 
-        return ds, de, da, di, dxs, dxe, dxa, dxi, dp, dr, dbeta, dbeta1
+        return ds, de, da, di, dxs, dxe, dxa, dxi, dp, dr, dtheta, dtheta1
 
     def timeUpdate (self, x, t) : 
         dx = self.dx(x, t)

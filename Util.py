@@ -1,4 +1,5 @@
 import more_itertools
+import math
 import contextlib
 import pandas
 import sys
@@ -93,7 +94,6 @@ def stdout_redirected(to=os.devnull, stdout=None):
             stdout.flush()
             os.dup2(copied.fileno(), stdout_fd)  # $ exec >&copied
 
-
 def getInfectedAndRecovered(csvFile):
     data = pandas.read_csv(csvFile)
     confirmed = data['Total Cases']
@@ -109,3 +109,5 @@ def sortAndFlattenDict(d) :
 def dictProduct (d) : 
     return map(dict, product(*map(lambda x : product([x[0]], x[1]), d.items())))
 
+def sigmoid (x) : 
+    return 1 / (1 + math.e ** -x)
