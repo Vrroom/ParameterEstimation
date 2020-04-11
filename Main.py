@@ -8,8 +8,8 @@ import pandas
 
 def getModel () : 
     params = {
-        'tl'    : 40, 
-        'te'    : 42,
+        'tl'    : 10, 
+        'te'    : 12,
         'k0'    : 1/7, 
         'kt'    : 0.075,
         'mu'    : 1/7,
