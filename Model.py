@@ -2,8 +2,29 @@ import torch
 import numpy as np
 
 class Spaxire () : 
-
+    """
+    Current ODE Model class. 
+    
+    The constructor takes a dictionary
+    of parameters and initializes the model.
+    """
     def __init__ (self, params) :
+        """
+        ODE has a lot of parameters.
+        These are present in a dictionary from
+        which the model is initialized.
+
+        Parameters
+        ----------
+        params : dictionary of parameters
+            Many of the parameters are easy to
+            fix because they are determined by
+            the COVID situation in India. For 
+            example kt is the testing rate. 
+            Other parameters such as beta/beta1
+            which are related to how the disease
+            spreads aren't so easy to specify.
+        """
         self.tl = params['tl']
         self.te = params['te']
 
@@ -30,6 +51,19 @@ class Spaxire () :
                 'dimgray', 'orange', 'violet']
         
     def dx (self, x, t) : 
+        """
+        This gives the derivative wrt time
+        of the state vector. 
+
+        This function can be directly plugged
+        into scipy's odeint with the initial 
+        values to simulate the model.
+
+        Parameters
+        ----------
+        x : state vector
+        t : time step 
+        """
         s, e, a, i, xs, xe, xa, xi, p, r = x
 
         k0 = 0 if t < self.tl or t > self.te else self.k0
@@ -39,6 +73,8 @@ class Spaxire () :
         b2 = 0.1   * self.beta1
         b3 = 0.002 * self.beta1
 
+        # I have renamed lambda in the model document
+        # to omega.
         omega = self.beta \
                 * (i + a + b1 * xa + b2 * xi + b3 * p \
                 + self.beta2 * (e + self.beta1 * xe))
