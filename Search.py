@@ -1,29 +1,69 @@
 from itertools import product
 from functools import partial
 import time
+import pandas
 from Simulate import *
 from Model import * 
+from Losses import *
 from Search import *
 from multiprocessing import Process, Pipe, cpu_count
 import math
+from EKF import *
 
-def gridSearch (ivRanges, paramRanges, groundTruth, lossFunction, T) :
-    lo, hi = T.min(), T.max()
-    samples = 5
-    T_ = np.linspace(lo, hi, (hi - lo) * samples)
-    startIdx = groundTruth[groundTruth['Date'] == '20 Mar'].index[0] 
-    deaths = groundTruth['New Deaths'][startIdx:].to_numpy()
-    nDays = deaths.size
+startDate = Date('29 Feb')
+firstCases = Date('14 Mar')
+firstDeath = Date('17 Mar')
+endDate = Date('7 Apr')
+
+def H (date) : 
+    h1    = [0,0,0,.02,0,0,0,0,.02,0]
+    h2    = [0,0,0,0.0,0,0,0,0,1.0,0]
+    zeros = [0,0,0,0.0,0,0,0,0,0.0,0]
+    if date < firstCases : 
+        return np.array([h1, zeros])
+    elif date >= firstCases and date < startDate + (endDate - firstDeath) :
+        return np.array([h1, h2])
+    else : 
+        return np.array([zeros, h2])
+
+def gridSearch (ivRanges, paramRanges, groundTruth, lossFunction) :
+    def getVars (idx) : 
+        return np.array([np.diag(P)[idx] for P in Ps])
+
+    def getCov (i, j) :
+        return np.array([P[i, j] for P in Ps])
+
+    T = endDate - startDate
+
+    deaths = getDailyDeaths(groundTruth, firstCases, firstDeath)
+    deaths = np.pad(deaths, ((0, T - deaths.size)))
+
+    P = getActive(groundTruth)
+    P = np.pad(P, ((T - P.size, 0)))
+
+    zs = np.stack([deaths, P]).T
+
+    R = np.diag([5, 5])
+    P0 = np.diag([1e3, 1e3, 1e3, 1e3, 1e-2, 1e-2, 1e-2, 1e-2, 1e-2, 1e-2])
+
     minLoss = math.inf
     minx0, minParams = None, None
+
     for x0, params in product(product(*ivRanges), dictProduct(paramRanges)) :
-        model = Sixer(x0, params)
-        result = simulator(model, T_)
-        infections = result[:, 2][::samples]
-        tested = result[:, -1][::samples]
-        deathEstimate = 0.02 * (infections + tested)
-        deathEstimate = deathEstimate[:nDays]
-        loss = lossFunction(deaths, deathEstimate)
+        model = Spaxire(params)  
+
+        xs, Ps = extendedKalmanFilter(model.timeUpdate, np.array(x0), P0, 
+                H, R, zs, startDate, endDate)
+        i, xi, p = xs[:, 3], xs[:, 7], xs[:, 8]
+
+        m = 0.02 * (i + xi + p) # Mortality
+
+        iVar, xiVar, pVar = getVars(3), getVars(7), getVars(8)
+        ipCov, pxiCov, ixiCov = getCov(3,8), getCov(7,8), getCov(3,7)
+
+        mVar = ((0.02)**2)*(iVar + pVar + xiVar + ipCov + pxiCov + ixiCov) 
+        loss = lossFunction(deaths, m, mVar) + lossFunction(P, p, pVar)
+
         if loss < minLoss : 
             minx0 = x0
             minParams = params
@@ -137,3 +177,31 @@ def parallelGridSearch (ivRanges, paramRanges, groundTruth, lossFunction, T) :
         p.join()
 
     return minX0, minParams, minLoss
+
+def main () :
+    lockdownBegin = Date('24 Mar') - startDate
+    lockdownEnd = Date('14 Apr') - startDate
+    paramRanges = {
+        'tl'    : [lockdownBegin], 
+        'te'    : [lockdownEnd],
+        'k0'    : [1/7], 
+        'kt'    : [0.075],
+        'mu'    : [1/7],
+        'sigma' : [1/5],
+        'gamma1': [1/21],
+        'gamma2': [1/21],
+        'gamma3': [1/17],
+        'N'     : [1.1e8],
+        'beta'  : [0.16],
+        'beta1' : [1.8],
+        'beta2' : [0.1],
+        'f'     : [0.1]
+    }
+    E0, A0, I0 = 25, 25, 25
+    N = 1.1e8
+    ivRanges = [[N-E0-A0-I0],[E0],[A0],[I0],[0],[0],[0],[0],[0],[0]]
+    data = pandas.read_csv('./Data/maha_data7apr.csv')
+    print(gridSearch(ivRanges, paramRanges, data, heteroscedasticLoss))
+
+if __name__ == "__main__" : 
+    main()

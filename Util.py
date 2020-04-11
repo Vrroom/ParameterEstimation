@@ -94,6 +94,12 @@ def stdout_redirected(to=os.devnull, stdout=None):
             os.dup2(copied.fileno(), stdout_fd)  # $ exec >&copied
 
 
+def getActive (data) : 
+    return (data['Total Cases'] - data['Total Recoveries'] - data['Total Deaths']).to_numpy()
+
+def getDailyDeaths (data, startDate, firstDeath) : 
+    return data['New Deaths'][firstDeath - startDate:].to_numpy()
+
 def getInfectedAndRecovered(csvFile):
     data = pandas.read_csv(csvFile)
     confirmed = data['Total Cases']
