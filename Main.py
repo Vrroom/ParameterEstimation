@@ -49,9 +49,9 @@ if __name__ == "__main__" :
         plt.legend()
 
     def H (date) : 
-        h1    = [0,0,0,.02,0,0,0,0,.02,0]
-        h2    = [0,0,0,0.0,0,0,0,0,1.0,0]
-        zeros = [0,0,0,0.0,0,0,0,0,0.0,0]
+        h1    = [0,0,0,.02,0,0,0,0,.02,0,0,0]
+        h2    = [0,0,0,0.0,0,0,0,0,1.0,0,0,0]
+        zeros = [0,0,0,0.0,0,0,0,0,0.0,0,0,0]
         if date < firstCases : 
             return np.array([h1, zeros])
         elif date >= firstCases and date < startDate + (endDate - firstDeath) :
@@ -74,18 +74,18 @@ if __name__ == "__main__" :
     zs = np.stack([deaths, P[:]]).T
 
     E0, A0, I0 = 25, 25, 25
-    init = np.array([N - E0 - A0 - I0, E0, A0, I0, 0, 0, 0, 0, 0, 0])
+    init = np.array([N-E0-A0-I0, E0, A0, I0, 0, 0, 0, 0, 0, 0, 0.5, 1])
 
     model = getModel()
 
     R = np.diag([1, 1])
-    P0 = np.diag([1e3, 1e3, 1e3, 1e3, 1e-2, 1e-2, 1e-2, 1e-2, 1e-2, 1e-2])
+    P0 = np.diag([1e3, 1e3, 1e3, 1e3, 1e-2, 1e-2, 1e-2, 1e-2, 1e-2, 1e-2, 1, 1])
 
     xs_, Ps_ = extendedKalmanFilter(model.timeUpdate, init, P0, H, R, zs, startDate, endDate)
 
     plt.scatter(np.arange(T), P, c='red', label='P (Actual Data)')
+    pltColumn(-1)
     pltColumn(-2)
-    pltColumn(2)
-    pltColumn(1)
+    pltColumn(-3)
     plt.show()
 
