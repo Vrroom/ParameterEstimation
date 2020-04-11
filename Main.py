@@ -36,17 +36,22 @@ def getModel () :
 if __name__ == "__main__" : 
 
     def pltColumn (idx) : 
+        x = np.arange(T)
+
         dstd = np.sqrt(np.array([np.diag(P)[idx] for P in Ps_]))
         d_  = np.array([x[idx] for x in xs_])
-        x = np.arange(T)
-        plt.plot(x, d_, c='blue', label=f'Estimate {names[idx]}')
+
+        c = model.colors[idx]
+        name = model.names[idx]
+
+        plt.plot(x, d_, c=c, label=f'Estimate {name}')
         plt.fill_between(x, np.maximum(d_ - dstd, 0), d_ + dstd, alpha=0.5, facecolor='grey')
         plt.legend()
 
     def H (date) : 
-        h1    = [0,0,.02,0,0,0,.02,0]
-        h2    = [0,0,0.0,0,0,0,1.0,0]
-        zeros = [0,0,0.0,0,0,0,0.0,0]
+        h1    = [0,0,0,.02,0,0,0,0,.02,0]
+        h2    = [0,0,0,0.0,0,0,0,0,1.0,0]
+        zeros = [0,0,0,0.0,0,0,0,0,0.0,0]
         if date < firstCases : 
             return np.array([h1, zeros])
         elif date >= firstCases and date < startDate + (endDate - firstDeath) :
@@ -54,7 +59,6 @@ if __name__ == "__main__" :
         else : 
             return np.array([zeros, h2])
 
-    names = ['S', 'A', 'I', 'Xs', 'Xa', 'Xi', 'P', 'R']
     T = endDate - startDate
     N   = 1.1e8
 
@@ -69,15 +73,15 @@ if __name__ == "__main__" :
 
     zs = np.stack([deaths, P[:]]).T
 
-    A0_, I0_ = 25, 25
-    init_ = np.array([N - A0_ - I0_, A0_, I0_, 0, 0, 0, 0, 0])
+    E0, A0, I0 = 25, 25, 25
+    init = np.array([N - E0 - A0 - I0, E0, A0, I0, 0, 0, 0, 0, 0, 0])
 
     model = getModel()
 
     R = np.diag([1, 1])
-    P0 = np.diag([1e3, 1e3, 1e3, 1e-2, 1e-2, 1e-2, 1e-2, 1e-2])
+    P0 = np.diag([1e3, 1e3, 1e3, 1e3, 1e-2, 1e-2, 1e-2, 1e-2, 1e-2, 1e-2])
 
-    xs_, Ps_ = extendedKalmanFilter(model.timeUpdate, init_, P0, H, R, zs, startDate, endDate)
+    xs_, Ps_ = extendedKalmanFilter(model.timeUpdate, init, P0, H, R, zs, startDate, endDate)
 
     plt.scatter(np.arange(T), P, c='red', label='P (Actual Data)')
     pltColumn(-2)

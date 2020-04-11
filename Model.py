@@ -23,6 +23,11 @@ class Spaxire () :
         self.f = params['f']
         
         self.N = params['N']
+
+        self.names = ['S', 'E', 'A', 'I', 'Xs', 'Xe', 'Xa', 'Xi', 'P', 'R']
+        self.colors = ['red', 'blue', 'green', 'black', 
+                'indianred', 'royalblue', 'lime', 
+                'dimgray', 'orange', 'violet']
         
     def dx (self, x, t) : 
         s, e, a, i, xs, xe, xa, xi, p, r = x
