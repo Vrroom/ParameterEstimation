@@ -21,15 +21,17 @@ def getModel () :
         'k0'    : 1/7, 
         'kt'    : 0.075,
         'mu'    : 1/7,
-        'sigma' : 1/38,
-        'gamma1': 1/19,
-        'gamma2': 1/14,
-        'gamma3': 1/14,
+        'sigma' : 1/5,
+        'gamma1': 1/21,
+        'gamma2': 1/21,
+        'gamma3': 1/17,
         'N'     : 1.1e8,
-        'beta'  : 0.31,
-        'beta1' : 0.71 
+        'beta'  : 0.16,
+        'beta1' : 1.8,
+        'beta2' : 0.1,
+        'f'     : 0.1
     }
-    return Sixer(params)
+    return Spaxire(params)
 
 if __name__ == "__main__" : 
 
