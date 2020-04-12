@@ -192,8 +192,8 @@ def main () :
         'gamma2': [1/21],
         'gamma3': [1/17],
         'N'     : [1.1e8],
-        'beta'  : [0.16],
-        'beta1' : [1.8],
+        'beta'  : np.arange(0, 1, 0.05),
+        'beta1' : np.arange(0, 2, 0.10),
         'beta2' : [0.1],
         'f'     : [0.1]
     }
