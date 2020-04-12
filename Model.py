@@ -1,4 +1,6 @@
 from Util import *
+import math
+from functools import partial
 import torch
 import matplotlib.pyplot as plt
 import numpy as np
@@ -31,36 +33,33 @@ class SpaxireAgeStratified () :
         self.tl = params['tl']
         self.te = params['te']
 
-        self.beta  = params['beta']
-        self.beta1 = params['beta1']
-        self.beta2 = params['beta2']
+        self.k0  = params['k0']
+        self.kt  = params['kt']
+        self.mu  = params['mu']
 
         self.sigma  = params['sigma']
         self.gamma1 = params['gamma1']
         self.gamma2 = params['gamma2']
         self.gamma3 = params['gamma3']
 
-        self.testFraction = params['testFraction']
-    
-        self.bins = params['bins'] # Age bins
-        self.adultBins = params['adultBins']
-        
-        self.f = params['f']
         self.N = params['N']
-        self.Nbar = params['Nbar']
 
-        self.k0  = params['k0']
-        self.kt  = params['kt']
-        self.kt2 = params['kt2']
-        self.mu  = params['mu']
+        self.beta  = params['beta']
+        self.beta2 = params['beta2']
 
+        self.f = params['f']
         self.lockdownLeakiness = params['lockdownLeakiness']
 
         self.contactHome = params['contactHome']
         self.contactTotal = params['contactTotal']
+    
+        self.bins = params['bins'] # Age bins
+        self.Nbar = params['Nbar']
+        self.adultBins = params['adultBins']
 
-        self.contactLockdown = self.contactTotal*self.lockdownLeakiness + self.contactHome*(1.0 - self.lockdownLeakiness)
-        self.contactLockdown2 = self.contactTotal * (self.lockdownLeakiness**2) + self.contactHome * (1.0 - self.lockdownLeakiness**2) 
+        self.testingFraction1 = params['testingFraction1']
+        self.testingFraction2 = params['testingFraction2']
+        self.testingFraction3 = params['testingFraction3']
 
         self.names = [
             [f'S{i}', f'E{i}', f'A{i}', f'I{i}', f'Xs{i}', f'Xe{i}', f'Xa{i}', f'Xi{i}', f'P{i}', f'R{i}'] 
@@ -91,19 +90,18 @@ class SpaxireAgeStratified () :
 
         # Convert depending on usage of this function
         if module == torch : 
-            ct = self.contactTotal.numpy()
-            cl = self.contactLockdown.numpy()
-            cl2 = self.contactLockdown2.numpy()
+            ct = self.contactTotal(t).numpy()
+            ch = self.contactHome(t).numpy()
             Nbar = self.Nbar.numpy()
         else : 
-            ct = self.contactTotal
-            cl = self.contactLockdown
-            cl2 = self.contactLockdown2
+            ct = self.contactTotal(t)
+            ch = self.contactHome(t)
             Nbar = self.Nbar
 
-        b1 = self.beta1
-        b2 = 0.1   * self.beta1
-        b3 = 0.002 * self.beta1
+        b3 = 0.002 * self.lockdownLeakiness
+
+        cl  = ct *  self.lockdownLeakiness     + ch * (1.0 - self.lockdownLeakiness)
+        cl2 = ct * (self.lockdownLeakiness**2) + ch * (1.0 - self.lockdownLeakiness**2) 
 
         # lambda for non-lockdown
         current = ct * (i + a + self.beta2*e) / Nbar
@@ -117,32 +115,46 @@ class SpaxireAgeStratified () :
         current[self.adultBins] += cl[self.adultBins, :] * b3 * p / self.Nbar[self.adultBins]
         lambdaLockdown = np.sum(self.beta * current, axis=1)
 
-        ds = -s * (lambdaNormal / self.N + self.k0(t)) + self.mu(t) * xs
-        de = self.f * lambdaNormal * s / self.N - self.gamma1 * e
-        da = (1 - self.f) * lambdaNormal * s / self.N \
-                - a * (self.sigma + self.k0(t)) \
+        ds = -s * (lambdaNormal + self.k0(t)) + self.mu(t) * xs
+        de = self.f * lambdaNormal * s \
+                - e * (self.k0(t) \
+                    + (1 - self.testingFraction3(t)) * self.gamma1 \
+                    + self.testingFraction3(t) * self.kt(t)) \
+                + self.mu(t) * xe
+        da = (1 - self.f) * lambdaNormal * s \
+                - a * (self.k0(t) \
+                    + (1 - self.testingFraction2(t)) * self.sigma \
+                    + self.testingFraction2(t) * self.kt(t)) \
                 + self.mu(t) * xa
-        di = self.sigma * a \
-                - i * (self.testFraction * self.kt(t) + self.k0(t) + self.gamma2) \
+        di = (1 - self.testingFraction2(t)) * self.sigma * a \
+                - i * (self.k0(t) \
+                    + self.testingFraction1(t) * self.kt(t) \
+                    + (1 - self.testingFraction1(t)) * self.gamma2) \
                 + self.mu(t) * xi 
-        dxs = - xs * (lambdaLockdown * self.beta1 / self.N + self.mu(t)) \
+        dxs = - xs * (lambdaLockdown + self.mu(t)) \
                 + self.k0(t) * s
-        dxe = self.f * lambdaLockdown * self.beta1 * xs / self.N \
+        dxe = self.f * lambdaLockdown * xs \
                 + self.k0(t) * e \
-                - xe * (self.gamma1 + self.mu(t))
-        dxa = (1 - self.f) * lambdaLockdown * xs/self.N \
-                - xa * (self.sigma + self.mu(t) + self.kt2(t)) \
+                - xe * (self.mu(t) \
+                    + (1 - self.testingFraction3(t)) * self.gamma1 \
+                    + self.testingFraction3(t) * self.kt(t))
+        dxa = (1 - self.f) * lambdaLockdown * xs \
+                - xa * (self.mu(t) \
+                    + (1 - self.testingFraction2(t)) * self.sigma \
+                    + self.testingFraction2(t) * self.kt(t)) \
                 + self.k0(t) * a 
-        dxi = self.sigma * xa \
+        dxi = (1 - self.testingFraction2(t)) * self.sigma * xa \
                 + self.k0(t) * i \
-                - xi * (self.testFraction * self.kt(t) + self.mu(t) \
-                        + (1 - self.testFraction) * self.gamma2)
-        dp = self.testFraction * self.kt(t) * (i + xi) \
-                - self.gamma3 * p \
-                + self.kt2(t) * (a + xi)
-        dr = self.gamma1 * (e + xe) \
-                + self.gamma2 * (1 - self.testFraction) * (i + xi) \
-                + self.gamma3 * p
+                - xi * (self.mu(t) \
+                    + self.testingFraction1(t) * self.kt(t) \
+                    + (1 - self.testingFraction1(t)) * self.gamma2)
+        dp = self.testingFraction1(t) * self.kt(t) * (i + xi) \
+                + self.testingFraction2(t) * self.kt(t) * (a + xi) \
+                + self.testingFraction3(t) * self.kt(t) * (e + xe) \
+                - self.gamma3 * p
+        dr = self.gamma3 * p \
+                + self.gamma2 * (1 - self.testingFraction1(t)) * (i + xi) \
+                + (1 - self.testingFraction3(t)) * self.gamma1 * (e + xe)
 
         return self.cat[module]((ds, de, da, di, dxs, dxe, dxa, dxi, dp, dr))
 
@@ -166,33 +178,39 @@ if __name__ == "__main__" :
     contactHome = np.loadtxt('./Data/home.csv', delimiter=',')
     contactTotal = np.loadtxt('./Data/total.csv', delimiter=',')
 
+    changeContactStart = math.inf
+    changeContactEnd   = math.inf
+
+    changeKt = math.inf
+    deltaKt  = math.inf
+
     params = {
         'tl'                : lockdownBegin, 
         'te'                : lockdownEnd,
-        'k0'                : lambda t : 0 if t < lockdownBegin or t > lockdownEnd else 1/7, 
-        'kt'                : lambda t : 0.5 if t > changeKt else 0.075,
-        'kt2'               : lambda t : 0.5 if t > changeKt else 0.075,
-        'mu'                : lambda t : 1/7 if t > lockdownEnd else 0,
+        'k0'                : partial(bumpFn, ti=lockdownBegin, tf=lockdownEnd, x1=0, x2=1/7),
+        'kt'                : partial(climbFn, ti=changeKt, tf=changeKt+deltaKt, xi=0.5, xf=1.0),
+        'mu'                : partial(stepFn, t0=lockdownEnd, x1=0, x2=1/7),
         'sigma'             : 1/5,
         'gamma1'            : 1/21,
         'gamma2'            : 1/21,
         'gamma3'            : 1/17,
         'N'                 : 1.1e8,
         'beta'              : 0.16,
-        'beta1'             : 1.8,
         'beta2'             : 0.1,
         'f'                 : 0.1,
         'lockdownLeakiness' : 0.5,
-        'contactHome'       : contactHome,
-        'contactTotal'      : contactTotal,
-        'testFraction'      : 1/13,
+        'contactHome'       : partial(bumpFn, ti=changeContactStart, tf=changeContactEnd, x1=contactHome, x2=0.5*contactHome),
+        'contactTotal'      : partial(bumpFn, ti=changeContactStart, tf=changeContactEnd, x1=contactTotal, x2=0.5*contactTotal),
         'bins'              : 3,
         'Nbar'              : np.array([40544482., 60315220., 11106935.]),
-        'adultBins'         : [1]
+        'adultBins'         : [1],
+        'testingFraction1'  : partial(climbFn, ti=changeKt, tf=changeKt+deltaKt, xi=1/13, xf=0.8),
+        'testingFraction2'  : partial(climbFn, ti=changeKt, tf=changeKt+deltaKt, xi=0, xf=0.5),
+        'testingFraction3'  : partial(climbFn, ti=changeKt, tf=changeKt+deltaKt, xi=0, xf=0.5),
     }
 
     model = SpaxireAgeStratified(params)
     T = endDate - startDate
-    result = simulator(model, np.zeros(30), np.arange(0, T, 0.5))
+    result = simulator(model, np.ones(30), np.arange(0, T, 0.5))
     plt.plot (np.arange(0, T, 0.5), result[:, 0])
     plt.show()

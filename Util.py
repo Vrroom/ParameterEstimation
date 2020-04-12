@@ -115,3 +115,24 @@ def sortAndFlattenDict(d) :
 def dictProduct (d) : 
     return map(dict, product(*map(lambda x : product([x[0]], x[1]), d.items())))
 
+def climbFn (t, ti, tf, xi, xf) : 
+    if t > tf : 
+        return xf
+    elif ti < t < tf : 
+        wt = (t - ti) / (tf - ti)
+        return xf * wt + xi * (1 - wt)
+    else : 
+        return xi
+
+def stepFn (t, t0, x1, x2) : 
+    if t > t0 : 
+        return x2
+    else :
+        return x1
+
+def bumpFn (t, ti, tf, x1, x2) : 
+    if t < ti or t > tf : 
+        return x1
+    else :
+        return x2
+
