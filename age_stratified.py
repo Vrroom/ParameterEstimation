@@ -132,6 +132,7 @@ def getPreds(beta = 0.2, lockdownLeakiness = 0.5, beta2 = 0.1, plot = False):
             current = 0.0
             for j in range(numBins):
                 current += contactTotal[i, j] * (I[j] + A[j] + beta2*E[j]) / Nbar[j]
+            for j in range(numBins):
                 current += contactLockdown[i, j] * (Xi[j] + Xa[j] + beta2*Xe[j]) / Nbar[j]
                 if i in adultBins:
                     current += contactTotal[i, j] * b3 * P[j] / Nbar[j] #b3 should be there right?
@@ -162,7 +163,6 @@ def getPreds(beta = 0.2, lockdownLeakiness = 0.5, beta2 = 0.1, plot = False):
             dPdt.append(testingFraction1 * kt * (I[i] + Xi[i]) - gamma3 * P[i] + testingFraction2 * kt * (A[i] + Xa[i]) + testingFraction3 * kt * (E[i] + Xe[i]))
             dRdt.append(gamma2 * (1 - testingFraction1) * (I[i] + Xi[i]) + gamma3 * P[i] + (1.0 - testingFraction3) * gamma1 * (E[i] + Xe[i]))
 
-        print(dSdt)
         return tuple(dSdt + dAdt + dIdt + dEdt + dXsdt + dXadt + dXidt + dXedt + dPdt + dRdt)
 
     # Initial conditions vector
@@ -221,7 +221,7 @@ def readDataIndia(startDate = None):
 
 def readDataState(startIndex = 0):
     global state
-    file = open('Data/' + state + '.csv', 'r')
+    file = open('Data/maha_data7apr.csv', 'r')
     reader = csv.reader(file)
     confirmed, recovered, dead = None, None, None
     count = -1
@@ -247,8 +247,8 @@ def getNbar(state):
     return Nbar
 
 # Maharashtra Data
-actualI, actualR = readDataState()
-actualI = np.asarray(actualI); actualR = np.asarray(actualR)
+# actualI, actualR = readDataState()
+# actualI = np.asarray(actualI); actualR = np.asarray(actualR)
 T = 50 - daysOffset
 t_l = 24 - daysOffset
 t_e = 24 + 21 - daysOffset

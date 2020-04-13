@@ -136,3 +136,6 @@ def bumpFn (t, ti, tf, x1, x2) :
     else :
         return x2
 
+def readStatePop (fname) : 
+    return np.loadtxt(fname, delimiter=',', usecols=(1))
+

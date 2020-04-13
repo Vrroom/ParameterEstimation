@@ -1,5 +1,6 @@
 from Util import *
 import math
+from more_itertools import collapse
 from functools import partial
 import torch
 import matplotlib.pyplot as plt
@@ -61,14 +62,14 @@ class SpaxireAgeStratified () :
         self.testingFraction2 = params['testingFraction2']
         self.testingFraction3 = params['testingFraction3']
 
-        self.names = [
+        self.names = list(more_itertools.collapse([
             [f'S{i}', f'E{i}', f'A{i}', f'I{i}', f'Xs{i}', f'Xe{i}', f'Xa{i}', f'Xi{i}', f'P{i}', f'R{i}'] 
             for i in range(self.bins)
-        ]
-        self.colors = ['red', 'blue', 'green', 'black', 
-                'indianred', 'royalblue', 'lime', 
-                'dimgray', 'orange', 'violet']
-
+        ]))
+        self.colors = ['red', 'darkred', 'salmon',
+                'chocolate', 'saddlebrown', 'sandybrown',
+                'olive', 'lawngreen', 'green',
+                'royalblue', 'blue', 'navy']
         self.cat = {np : np.hstack, torch : torch.cat}
         
     def dx (self, x, t, module) : 
@@ -86,13 +87,13 @@ class SpaxireAgeStratified () :
         t : time step 
         module : whether to use torch or numpy
         """
-        s, e, a, i, xs, xe, xa, xi, p, r = x.reshape((self.bins, -1)).T
+        s, e, a, i, xs, xe, xa, xi, p, r = x.reshape((-1, self.bins))
 
         # Convert depending on usage of this function
         if module == torch : 
-            ct = self.contactTotal(t).numpy()
-            ch = self.contactHome(t).numpy()
-            Nbar = self.Nbar.numpy()
+            ct   = torch.from_numpy(self.contactTotal(t))
+            ch   = torch.from_numpy(self.contactHome(t))
+            Nbar = torch.from_numpy(self.Nbar)
         else : 
             ct = self.contactTotal(t)
             ch = self.contactHome(t)
@@ -106,14 +107,14 @@ class SpaxireAgeStratified () :
         # lambda for non-lockdown
         current = ct * (i + a + self.beta2*e) / Nbar
         current += cl * (xi + xa + self.beta2*xe) / Nbar
-        current[self.adultBins] += ct[self.adultBins, :] * b3 + p / Nbar[self.adultBins]
-        lambdaNormal = np.sum(self.beta * current, axis=1)
+        current[self.adultBins] += ct[self.adultBins, :] * b3 * p / Nbar[self.adultBins]
+        lambdaNormal = module.sum(self.beta * current, axis=1)
 
         # lambda for lockdown
-        current += cl * (i + a + self.beta2*e) / self.Nbar
-        current += cl2 * (xi + xa + self.beta2*xe) / self.Nbar
-        current[self.adultBins] += cl[self.adultBins, :] * b3 * p / self.Nbar[self.adultBins]
-        lambdaLockdown = np.sum(self.beta * current, axis=1)
+        current = cl * (i + a + self.beta2*e) / Nbar
+        current += cl2 * (xi + xa + self.beta2*xe) / Nbar
+        current[self.adultBins] += cl[self.adultBins, :] * b3 * p / Nbar[self.adultBins]
+        lambdaLockdown = module.sum(self.beta * current, axis=1)
 
         ds = -s * (lambdaNormal + self.k0(t)) + self.mu(t) * xs
         de = self.f * lambdaNormal * s \
@@ -160,10 +161,7 @@ class SpaxireAgeStratified () :
 
     def timeUpdate (self, x, t, module=np) : 
         dx = self.dx(x, t, module)
-        if torch.is_tensor(x) : 
-            return (torch.stack(dx) + x)
-        else : 
-            return (np.stack(dx) + x)
+        return x + dx
 
 if __name__ == "__main__" :
     startDate = Date('29 Feb')
@@ -193,12 +191,12 @@ if __name__ == "__main__" :
         'sigma'             : 1/5,
         'gamma1'            : 1/21,
         'gamma2'            : 1/21,
-        'gamma3'            : 1/17,
+        'gamma3'            : 1/19,
         'N'                 : 1.1e8,
-        'beta'              : 0.16,
+        'beta'              : 0.015,
         'beta2'             : 0.1,
-        'f'                 : 0.1,
-        'lockdownLeakiness' : 0.5,
+        'f'                 : 0.2,
+        'lockdownLeakiness' : 0.9,
         'contactHome'       : partial(bumpFn, ti=changeContactStart, tf=changeContactEnd, x1=contactHome, x2=0.5*contactHome),
         'contactTotal'      : partial(bumpFn, ti=changeContactStart, tf=changeContactEnd, x1=contactTotal, x2=0.5*contactTotal),
         'bins'              : 3,
@@ -211,6 +209,7 @@ if __name__ == "__main__" :
 
     model = SpaxireAgeStratified(params)
     T = endDate - startDate
-    result = simulator(model, np.ones(30), np.arange(0, T, 0.5))
-    plt.plot (np.arange(0, T, 0.5), result[:, 0])
+    x0 = [40544482.0, 60314940.0, 11106935.0, 0, 56.0, 0, 0, 210.0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 14, 0, 0, 0, 0]
+    result = simulator(model, x0, np.linspace(0, T, T))
+    plt.plot (np.linspace(0, T, T), result[:, -10])
     plt.show()
