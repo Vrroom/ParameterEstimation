@@ -161,8 +161,8 @@ class SpaxireAgeStratified () :
                 + self.gamma2 * (1 - self.testingFraction1(t)) * (i + xi) \
                 + (1 - self.testingFraction3(t)) * self.gamma1 * (e + xe)
         if module == torch : 
-            dtheta = torch.tensor([0.])
-            dtheta1 = torch.tensor([0.])
+            dtheta = torch.tensor([0.], dtype=torch.double)
+            dtheta1 = torch.tensor([0.], dtype=torch.double)
         else : 
             dtheta = np.array([0.])
             dtheta1 = np.array([0.])

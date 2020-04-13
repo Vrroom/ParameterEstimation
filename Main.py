@@ -1,4 +1,5 @@
 from Model import *
+import os.path as osp
 from Search import *
 from Losses import *
 from itertools import product
@@ -8,26 +9,42 @@ import pandas
 
 # Important events
 
-def processTimeSeries (state) : 
+def splitDates (date) : 
+    d, m, _ = date.split('-')
+    d = int(d)
+    return f'{d} {m}'
+
+def processTimeSeries (state) :
     fname = state + '.csv'
     path = osp.join('./Data/time_series', fname)
     data = pandas.read_csv(path)
-    
-    firstCases = Date(data['Date'][0])
-    firstDeath = Date(data[data['Total Dead'] > 0]['Date'][0])
+
+    dates = data['Date'].map(splitDates)
+    if dates[data['Total Dead'] > 0].size == 0 : 
+        raise Exception
+
+    firstCases = Date(dates[0])
+    firstDeath = Date(dates[data['Total Dead'] > 0].iloc[0])
     startDate = firstDeath - 17
-    endDate = Date(data['Date'][-1])
+    endDate = Date(dates.iloc[-1])
 
     T = endDate - startDate
 
     totalDeaths = data['Total Dead'].to_numpy()
     
-    deaths = data['New Deaths'][data['Total Deaths'] > 0].to_numpy()
-    deaths = np.pad(deaths, ((0, T - deaths.size)))
+    deaths = data['Daily Dead'][data['Total Dead'] > 0].to_numpy()
+
+    if T > deaths.size :
+        deaths = np.pad(deaths, ((0, T - deaths.size)))
 
     P = (data['Total Cases'] - data['Total Recovered'] - data['Total Dead']).to_numpy()
-    P = np.pad(P, ((T - P.size, 0)))
-    zs = np.stack([deaths, P[:]]).T
+
+    if T > P.size :
+        P = np.pad(P, ((T - P.size, 0)))
+    else : 
+        P = P[startDate - firstCases + 1:]
+
+    zs = np.stack([deaths, P]).T
 
     return startDate, firstCases, firstDeath, endDate, zs
 
@@ -101,7 +118,7 @@ def estimate (state) :
             return np.array([h1, zeros])
         elif date >= firstCases and date < startDate + (endDate - firstDeath) :
             return np.array([h1, h2])
-        elif date < dataEndDate : 
+        elif date < endDate : 
             return np.array([zeros, h2])
         else : 
             return np.array([zeros, zeros])
@@ -111,7 +128,11 @@ def estimate (state) :
     model = getModel(state)
     Nbar = readStatePop(state)
 
-    x0 = np.array([*(Nbar.tolist()), 0, 56.0, 0, 0, 210.0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 14, 0, 0, 0, 0])
+    E0 = [0, 10, 0]
+    A0 = [0, 10, 0]
+    I0 = [0, 10, 0]
+    Nbar[1] -= 30
+    x0 = np.array([*(Nbar.tolist()), *E0, *A0, *I0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0])
 
     R = np.diag([5, 5])
 
@@ -119,6 +140,8 @@ def estimate (state) :
     P0[-1,-1] = 1
     P0[-2,-2] = 1
 
+    import pdb
+    pdb.set_trace()
     xs_, Ps_ = extendedKalmanFilter(model.timeUpdate, x0, P0, H, R, zs, startDate, endDate)
 
     xs_[:, -2] = sigmoid(xs_[:, -2])
@@ -127,4 +150,14 @@ def estimate (state) :
     return xs_[-1, -2], xs_[-1, -1]
 
 if __name__ == "__main__" : 
-    pass
+    states = os.listdir('./Data/ageBins/')
+    states = map(osp.splitext, states)
+    states = [s for s, _ in states]
+    betas = estimate('MH')
+    print(betas)
+    # for s in states : 
+    #     try : 
+    #         betas = estimate(s)
+    #         print(s, betas)
+    #     except Exception : 
+    #         continue

@@ -1,5 +1,6 @@
 import more_itertools
 import contextlib
+import math
 import pandas
 import sys
 import numpy as np
@@ -52,7 +53,7 @@ class Date () :
             return (d1 - d2).days
         else : 
             d1 = datetime.date(2020, self.month, self.day)
-            td = timedelta(days=-that)
+            td = datetime.timedelta(days=-that)
             d2 = d1 + td
             month = self.MONTHS[d2.month - 1]
             day = d2.day
@@ -165,6 +166,9 @@ def getAgeMortality (state) :
     bins = np.array([pop[:2].sum(), pop[2:6].sum(), pop[6:].sum()])
 
     return prod/bins
+
+def sigmoid (x) : 
+    return 1 / (1 + math.e ** -x)
 
 if __name__ == "__main__" : 
     m = getAgeMortality('MAHARASHTRA')
