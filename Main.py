@@ -94,9 +94,9 @@ def estimate (state) :
 
     def H (date) : 
         z = [0,0,0]
-        h1    = [*z,*z,*z,*m,*z,*z,*z,*m,*m,*z]
-        h2    = [*z,*z,*z,*z,*z,*z,*z,*z,1,1,1,*z]
-        zeros = [*z,*z,*z,*z,*z,*z,*z,*z,*z,*z]
+        h1    = [*z,*z,*z,*m,*z,*z,*z,*m,*m,*z, 0, 0]
+        h2    = [*z,*z,*z,*z,*z,*z,*z,*z,1,1,1,*z, 0, 0]
+        zeros = [*z,*z,*z,*z,*z,*z,*z,*z,*z,*z, 0, 0]
         if date < firstCases : 
             return np.array([h1, zeros])
         elif date >= firstCases and date < startDate + (endDate - firstDeath) :
@@ -114,11 +114,17 @@ def estimate (state) :
     x0 = np.array([*(Nbar.tolist()), 0, 56.0, 0, 0, 210.0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 14, 0, 0, 0, 0])
 
     R = np.diag([5, 5])
-    P0 = np.eye(30) * 1e3
+
+    P0 = np.eye(32) * 1e3
+    P0[-1,-1] = 1
+    P0[-2,-2] = 1
 
     xs_, Ps_ = extendedKalmanFilter(model.timeUpdate, x0, P0, H, R, zs, startDate, endDate)
-    pass
 
+    xs_[:, -2] = sigmoid(xs_[:, -2])
+    xs_[:, -1] = sigmoid(xs_[:, -1])
+
+    return xs_[-1, -2], xs_[-1, -1]
 
 if __name__ == "__main__" : 
     pass

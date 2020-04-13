@@ -87,7 +87,11 @@ class SpaxireAgeStratified () :
         t : time step 
         module : whether to use torch or numpy
         """
-        s, e, a, i, xs, xe, xa, xi, p, r = x.reshape((-1, self.bins))
+        s, e, a, i, xs, xe, xa, xi, p, r = x[:-2].reshape((-1, self.bins))
+        theta, theta1 = x[-2:]
+
+        beta = sigmoid(theta)
+        lockdownLeakiness = sigmoid(theta1)
 
         # Convert depending on usage of this function
         if module == torch : 
@@ -99,22 +103,22 @@ class SpaxireAgeStratified () :
             ch = self.contactHome(t)
             Nbar = self.Nbar
 
-        b3 = 0.002 * self.lockdownLeakiness
+        b3 = 0.002 * lockdownLeakiness
 
-        cl  = ct *  self.lockdownLeakiness     + ch * (1.0 - self.lockdownLeakiness)
-        cl2 = ct * (self.lockdownLeakiness**2) + ch * (1.0 - self.lockdownLeakiness**2) 
+        cl  = ct *  lockdownLeakiness     + ch * (1.0 - lockdownLeakiness)
+        cl2 = ct * (lockdownLeakiness**2) + ch * (1.0 - lockdownLeakiness**2) 
 
         # lambda for non-lockdown
         current = ct * (i + a + self.beta2*e) / Nbar
         current += cl * (xi + xa + self.beta2*xe) / Nbar
         current[self.adultBins] += ct[self.adultBins, :] * b3 * p / Nbar[self.adultBins]
-        lambdaNormal = module.sum(self.beta * current, axis=1)
+        lambdaNormal = module.sum(beta * current, axis=1)
 
         # lambda for lockdown
         current = cl * (i + a + self.beta2*e) / Nbar
         current += cl2 * (xi + xa + self.beta2*xe) / Nbar
         current[self.adultBins] += cl[self.adultBins, :] * b3 * p / Nbar[self.adultBins]
-        lambdaLockdown = module.sum(self.beta * current, axis=1)
+        lambdaLockdown = module.sum(beta * current, axis=1)
 
         ds = -s * (lambdaNormal + self.k0(t)) + self.mu(t) * xs
         de = self.f * lambdaNormal * s \
@@ -156,8 +160,14 @@ class SpaxireAgeStratified () :
         dr = self.gamma3 * p \
                 + self.gamma2 * (1 - self.testingFraction1(t)) * (i + xi) \
                 + (1 - self.testingFraction3(t)) * self.gamma1 * (e + xe)
+        if module == torch : 
+            dtheta = torch.tensor([0.])
+            dtheta1 = torch.tensor([0.])
+        else : 
+            dtheta = np.array([0.])
+            dtheta1 = np.array([0.])
 
-        return self.cat[module]((ds, de, da, di, dxs, dxe, dxa, dxi, dp, dr))
+        return self.cat[module]((ds, de, da, di, dxs, dxe, dxa, dxi, dp, dr, dtheta, dtheta1))
 
     def timeUpdate (self, x, t, module=np) : 
         dx = self.dx(x, t, module)
