@@ -1,4 +1,5 @@
 from Util import *
+import random
 import math
 from more_itertools import collapse
 from functools import partial
@@ -62,14 +63,16 @@ class SpaxireAgeStratified () :
         self.testingFraction2 = params['testingFraction2']
         self.testingFraction3 = params['testingFraction3']
 
-        self.names = list(more_itertools.collapse([
-            [f'S{i}', f'E{i}', f'A{i}', f'I{i}', f'Xs{i}', f'Xe{i}', f'Xa{i}', f'Xi{i}', f'P{i}', f'R{i}'] 
-            for i in range(self.bins)
-        ]))
-        self.colors = ['red', 'darkred', 'salmon',
-                'chocolate', 'saddlebrown', 'sandybrown',
-                'olive', 'lawngreen', 'green',
-                'royalblue', 'blue', 'navy']
+        names = ['S', 'E', 'A', 'I', 'Xs', 'Xe', 'Xa', 'Xi', 'P', 'R']
+        self.names = [[n + str(i) for i in range(1, self.bins + 1)] for n in names]
+        self.names = list(collapse(self.names))
+        
+        r = [random.random() for _ in range(30)]
+        g = [random.random() for _ in range(30)]
+        b = [random.random() for _ in range(30)]
+
+        self.colors = list(zip(r,g,b))
+
         self.cat = {np : np.hstack, torch : torch.cat}
         
     def dx (self, x, t, module) : 
@@ -87,11 +90,7 @@ class SpaxireAgeStratified () :
         t : time step 
         module : whether to use torch or numpy
         """
-        s, e, a, i, xs, xe, xa, xi, p, r = x[:-2].reshape((-1, self.bins))
-        theta, theta1 = x[-2:]
-
-        beta = sigmoid(theta)
-        lockdownLeakiness = sigmoid(theta1)
+        s, e, a, i, xs, xe, xa, xi, p, r = x.reshape((-1, self.bins))
 
         # Convert depending on usage of this function
         if module == torch : 
@@ -103,22 +102,22 @@ class SpaxireAgeStratified () :
             ch = self.contactHome(t)
             Nbar = self.Nbar
 
-        b3 = 0.002 * lockdownLeakiness
+        b3 = 0.002 * self.lockdownLeakiness
 
-        cl  = ct *  lockdownLeakiness     + ch * (1.0 - lockdownLeakiness)
-        cl2 = ct * (lockdownLeakiness**2) + ch * (1.0 - lockdownLeakiness**2) 
+        cl  = ct *  self.lockdownLeakiness     + ch * (1.0 - self.lockdownLeakiness)
+        cl2 = ct * (self.lockdownLeakiness**2) + ch * (1.0 - self.lockdownLeakiness**2) 
 
         # lambda for non-lockdown
         current = ct * (i + a + self.beta2*e) / Nbar
         current += cl * (xi + xa + self.beta2*xe) / Nbar
         current[self.adultBins] += ct[self.adultBins, :] * b3 * p / Nbar[self.adultBins]
-        lambdaNormal = module.sum(beta * current, axis=1)
+        lambdaNormal = module.sum(self.beta * current, axis=1)
 
         # lambda for lockdown
         current = cl * (i + a + self.beta2*e) / Nbar
         current += cl2 * (xi + xa + self.beta2*xe) / Nbar
         current[self.adultBins] += cl[self.adultBins, :] * b3 * p / Nbar[self.adultBins]
-        lambdaLockdown = module.sum(beta * current, axis=1)
+        lambdaLockdown = module.sum(self.beta * current, axis=1)
 
         ds = -s * (lambdaNormal + self.k0(t)) + self.mu(t) * xs
         de = self.f * lambdaNormal * s \
@@ -160,14 +159,8 @@ class SpaxireAgeStratified () :
         dr = self.gamma3 * p \
                 + self.gamma2 * (1 - self.testingFraction1(t)) * (i + xi) \
                 + (1 - self.testingFraction3(t)) * self.gamma1 * (e + xe)
-        if module == torch : 
-            dtheta = torch.tensor([0.], dtype=torch.double)
-            dtheta1 = torch.tensor([0.], dtype=torch.double)
-        else : 
-            dtheta = np.array([0.])
-            dtheta1 = np.array([0.])
 
-        return self.cat[module]((ds, de, da, di, dxs, dxe, dxa, dxi, dp, dr, dtheta, dtheta1))
+        return self.cat[module]((ds, de, da, di, dxs, dxe, dxa, dxi, dp, dr))
 
     def timeUpdate (self, x, t, module=np) : 
         dx = self.dx(x, t, module)

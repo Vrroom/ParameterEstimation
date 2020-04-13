@@ -111,12 +111,13 @@ def estimate (state) :
 
     def H (date) : 
         z = [0,0,0]
-        h1    = [*z,*z,*z,*m,*z,*z,*z,*m,*m,*z, 0, 0]
-        h2    = [*z,*z,*z,*z,*z,*z,*z,*z,1,1,1,*z, 0, 0]
-        zeros = [*z,*z,*z,*z,*z,*z,*z,*z,*z,*z, 0, 0]
+        o = [1,1,1]
+        h1    = [*z,*z,*z,*m,*z,*z,*z,*m,*m,*z]
+        h2    = [*z,*z,*z,*z,*z,*z,*z,*z,*o,*z]
+        zeros = [*z,*z,*z,*z,*z,*z,*z,*z,*z,*z]
         if date < firstCases : 
             return np.array([h1, zeros])
-        elif date >= firstCases and date < startDate + (endDate - firstDeath) :
+        elif date >= firstCases and date <= startDate + (endDate - firstDeath + 1) :
             return np.array([h1, h2])
         elif date < endDate : 
             return np.array([zeros, h2])
@@ -125,6 +126,9 @@ def estimate (state) :
 
     m = (getAgeMortality(state) * 0.01).tolist()
     startDate, firstCases, firstDeath, endDate, zs = processTimeSeries(state)
+
+    T = endDate - startDate
+
     model = getModel(state)
     Nbar = readStatePop(state)
 
@@ -132,32 +136,27 @@ def estimate (state) :
     A0 = [0, 10, 0]
     I0 = [0, 10, 0]
     Nbar[1] -= 30
-    x0 = np.array([*(Nbar.tolist()), *E0, *A0, *I0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0])
+    x0 = np.array([*(Nbar.tolist()), *E0, *A0, *I0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0])
 
     R = np.diag([5, 5])
 
-    P0 = np.eye(32) * 1e3
-    P0[-1,-1] = 1
-    P0[-2,-2] = 1
+    var1 = [100, 100, 100]
+    var2 = [1e-2, 1e-2, 1e-2]
+    P0 = np.diag([*var1, *var1, *var1, *var1, *var2, *var2, *var2, *var2, *var2, *var2])
 
-    import pdb
-    pdb.set_trace()
     xs_, Ps_ = extendedKalmanFilter(model.timeUpdate, x0, P0, H, R, zs, startDate, endDate)
 
-    xs_[:, -2] = sigmoid(xs_[:, -2])
-    xs_[:, -1] = sigmoid(xs_[:, -1])
-
-    return xs_[-1, -2], xs_[-1, -1]
+    pltColumn(-4)
+    plt.show()
 
 if __name__ == "__main__" : 
-    states = os.listdir('./Data/ageBins/')
-    states = map(osp.splitext, states)
-    states = [s for s, _ in states]
-    betas = estimate('MH')
-    print(betas)
-    # for s in states : 
-    #     try : 
-    #         betas = estimate(s)
-    #         print(s, betas)
-    #     except Exception : 
-    #         continue
+#    states = os.listdir('./Data/ageBins/')
+#    states = map(osp.splitext, states)
+#    states = [s for s, _ in states]
+    estimate('MH')
+#     for s in states : 
+#         try : 
+#             betas = estimate(s)
+#             print(s, betas)
+#         except Exception : 
+#             continue

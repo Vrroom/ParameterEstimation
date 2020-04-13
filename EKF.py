@@ -39,7 +39,6 @@ def extendedKalmanFilter (updateStep, x0, P0, H, R, z, tStart, tEnd) :
         xtMinus = updateStep(xPrev, i+1)
         A = getJacobian(partial(updateStep, t=i+1, module=torch), torch.from_numpy(xPrev))
         PMinus = A @ PPrev @ A.T 
-
         # Measurement update
         h = H(date)
         K = PMinus @ h.T @ np.linalg.inv(h @ PMinus @ h.T + R)
