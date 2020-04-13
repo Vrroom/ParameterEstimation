@@ -6,6 +6,7 @@ import numpy as np
 from itertools import product
 import datetime
 import os
+import os.path as osp
 
 class DateIter () : 
     def __init__ (self, start, end) :
@@ -139,3 +140,22 @@ def bumpFn (t, ti, tf, x1, x2) :
 def readStatePop (fname) : 
     return np.loadtxt(fname, delimiter=',', usecols=(1))
 
+def getAgeMortality (state) : 
+    ageWise = np.loadtxt('./Data/ageWiseMortality.csv', delimiter=',', usecols=(1))
+
+    fname = state + '.csv'
+    path = osp.join('./Data/ageBins/', fname)
+
+    pop = np.loadtxt(path, delimiter=',', usecols=(1))
+    pop = np.hstack((pop[:ageWise.size-1],pop[ageWise.size-1:].sum())) 
+
+    prod = pop * ageWise
+
+    prod = np.array([prod[:2].sum(), prod[2:6].sum(), prod[6:].sum()])
+    bins = np.array([pop[:2].sum(), pop[2:6].sum(), pop[6:].sum()])
+
+    return prod/bins
+
+if __name__ == "__main__" : 
+    m = getAgeMortality('MAHARASHTRA')
+    print(m)
