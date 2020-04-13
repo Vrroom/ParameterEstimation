@@ -46,9 +46,17 @@ class Date () :
         return Date(f'{day} {month}')
     
     def __sub__ (self, that) :
-        d1 = datetime.date(2020, self.month, self.day)
-        d2 = datetime.date(2020, that.month, that.day)
-        return (d1 - d2).days
+        if isinstance(that, Date) : 
+            d1 = datetime.date(2020, self.month, self.day)
+            d2 = datetime.date(2020, that.month, that.day)
+            return (d1 - d2).days
+        else : 
+            d1 = datetime.date(2020, self.month, self.day)
+            td = timedelta(days=-that)
+            d2 = d1 + td
+            month = self.MONTHS[d2.month - 1]
+            day = d2.day
+            return Date(f'{day} {month}')
 
     def __lt__ (self, that) : 
         return (self.month, self.day) < (that.month, that.day)
@@ -137,8 +145,10 @@ def bumpFn (t, ti, tf, x1, x2) :
     else :
         return x2
 
-def readStatePop (fname) : 
-    return np.loadtxt(fname, delimiter=',', usecols=(1))
+def readStatePop (state) : 
+    fname = state + '.csv'
+    path = osp.join('./Data/population/', fname)
+    return np.loadtxt(path, delimiter=',', usecols=(1))
 
 def getAgeMortality (state) : 
     ageWise = np.loadtxt('./Data/ageWiseMortality.csv', delimiter=',', usecols=(1))

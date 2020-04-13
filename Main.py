@@ -7,18 +7,33 @@ import numpy as np
 import pandas
 
 # Important events
-startDate = Date('29 Feb')
-firstCases = Date('14 Mar')
-firstDeath = Date('17 Mar')
-dateEndDate = Date('7 Apr')
-endDate = Date('7 Apr')
 
-def getModel (Nbar) : 
-    startDate = Date('29 Feb')
-    firstCases = Date('14 Mar')
-    firstDeath = Date('17 Mar')
-    endDate = Date('7 Apr')
-    changeKt = Date('27 Mar') - startDate
+def processTimeSeries (state) : 
+    fname = state + '.csv'
+    path = osp.join('./Data/time_series', fname)
+    data = pandas.read_csv(path)
+    
+    firstCases = Date(data['Date'][0])
+    firstDeath = Date(data[data['Total Dead'] > 0]['Date'][0])
+    startDate = firstDeath - 17
+    endDate = Date(data['Date'][-1])
+
+    T = endDate - startDate
+
+    totalDeaths = data['Total Dead'].to_numpy()
+    
+    deaths = data['New Deaths'][data['Total Deaths'] > 0].to_numpy()
+    deaths = np.pad(deaths, ((0, T - deaths.size)))
+
+    P = (data['Total Cases'] - data['Total Recovered'] - data['Total Dead']).to_numpy()
+    P = np.pad(P, ((T - P.size, 0)))
+    zs = np.stack([deaths, P[:]]).T
+
+    return startDate, firstCases, firstDeath, endDate, zs
+
+
+def getModel (state) : 
+    startDate, firstCases, firstDeath, endDate, _ = processTimeSeries(state)
 
     lockdownBegin = Date('24 Mar') - startDate
     lockdownEnd = Date('14 Apr') - startDate
@@ -31,6 +46,8 @@ def getModel (Nbar) :
 
     changeKt = math.inf
     deltaKt  = math.inf
+
+    Nbar = readStatePop(state)
 
     params = {
         'tl'                : lockdownBegin, 
@@ -60,7 +77,7 @@ def getModel (Nbar) :
     model = SpaxireAgeStratified(params)
     return model
 
-if __name__ == "__main__" : 
+def estimate (state) : 
 
     def pltColumn (idx) : 
         x = np.arange(T)
@@ -76,9 +93,10 @@ if __name__ == "__main__" :
         plt.legend()
 
     def H (date) : 
-        h1    = [0,0,0,.02,0,0,0,0,.02,0,0,0,0,.02,0,0,0,0,.02,0,0,0,0,.02,0,0,0,0,.02,0]
-        h2    = [0,0,0,0.0,0,0,0,0,1.0,0,0,0,0,0.0,0,0,0,0,1.0,0,0,0,0,0.0,0,0,0,0,1.0,0]
-        zeros = [0,0,0,0.0,0,0,0,0,0.0,0,0,0,0,0.0,0,0,0,0,0.0,0,0,0,0,0.0,0,0,0,0,0.0,0]
+        z = [0,0,0]
+        h1    = [*z,*z,*z,*m,*z,*z,*z,*m,*m,*z]
+        h2    = [*z,*z,*z,*z,*z,*z,*z,*z,1,1,1,*z]
+        zeros = [*z,*z,*z,*z,*z,*z,*z,*z,*z,*z]
         if date < firstCases : 
             return np.array([h1, zeros])
         elif date >= firstCases and date < startDate + (endDate - firstDeath) :
@@ -88,24 +106,10 @@ if __name__ == "__main__" :
         else : 
             return np.array([zeros, zeros])
 
-    T = endDate - startDate
-    N   = 1.1e8
-    import pdb
-    pdb.set_trace()
-    Nbar = readStatePop('./Data/population/MH.csv')
-
-    data = pandas.read_csv('./Data/maha_data7apr.csv')
-    totalDeaths = data['Total Deaths'].to_numpy()
-    
-    deaths = data['New Deaths'][data['Total Deaths'] > 0].to_numpy()
-    deaths = np.pad(deaths, ((0, T - deaths.size)))
-
-    P = (data['Total Cases'] - data['Total Recoveries'] - data['Total Deaths']).to_numpy()
-    P = np.pad(P, ((T - P.size, 0)))
-
-    zs = np.stack([deaths, P[:]]).T
-
-    model = getModel(Nbar)
+    m = (getAgeMortality(state) * 0.01).tolist()
+    startDate, firstCases, firstDeath, endDate, zs = processTimeSeries(state)
+    model = getModel(state)
+    Nbar = readStatePop(state)
 
     x0 = np.array([*(Nbar.tolist()), 0, 56.0, 0, 0, 210.0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 14, 0, 0, 0, 0])
 
@@ -113,10 +117,8 @@ if __name__ == "__main__" :
     P0 = np.eye(30) * 1e3
 
     xs_, Ps_ = extendedKalmanFilter(model.timeUpdate, x0, P0, H, R, zs, startDate, endDate)
+    pass
 
-    plt.scatter(np.arange(T), P, c='red', label='P (Actual Data)')
-    pltColumn(-2)
-    pltColumn(2)
-    pltColumn(1)
-    plt.show()
 
+if __name__ == "__main__" : 
+    pass
