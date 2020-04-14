@@ -153,7 +153,7 @@ class SpaxireAgeStratified () :
                     + self.testingFraction1(t) * self.kt(t) \
                     + (1 - self.testingFraction1(t)) * self.gamma2)
         dp = self.testingFraction1(t) * self.kt(t) * (i + xi) \
-                + self.testingFraction2(t) * self.kt(t) * (a + xi) \
+                + self.testingFraction2(t) * self.kt(t) * (a + xa) \
                 + self.testingFraction3(t) * self.kt(t) * (e + xe) \
                 - self.gamma3 * p
         dr = self.gamma3 * p \

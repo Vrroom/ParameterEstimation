@@ -52,8 +52,8 @@ def processTimeSeries (state) :
 def getModel (state) : 
     startDate, firstCases, firstDeath, endDate, _ = processTimeSeries(state)
 
-    lockdownBegin = Date('24 Mar') - startDate
-    lockdownEnd = Date('14 Apr') - startDate
+    lockdownBegin = Date('24 Mar') - startDate + 100
+    lockdownEnd = Date('14 Apr') - startDate + 100
 
     contactHome = np.loadtxt('./Data/home.csv', delimiter=',')
     contactTotal = np.loadtxt('./Data/total.csv', delimiter=',')
@@ -77,7 +77,7 @@ def getModel (state) :
         'gamma2'            : 1/21,
         'gamma3'            : 1/19,
         'N'                 : 1.1e8,
-        'beta'              : 0.16,
+        'beta'              : 0.015,
         'beta2'             : 0.1,
         'f'                 : 0.2,
         'lockdownLeakiness' : 0.9,
@@ -97,7 +97,7 @@ def getModel (state) :
 def estimate (state) : 
 
     def pltColumn (idx) : 
-        x = np.arange(T)
+        x = np.arange(0, T, 0.1)
 
         dstd = np.sqrt(np.array([np.diag(P)[idx] for P in Ps_]))
         d_  = np.array([x[idx] for x in xs_])
@@ -140,13 +140,17 @@ def estimate (state) :
 
     R = np.diag([5, 5])
 
-    var1 = [100, 100, 100]
-    var2 = [1e-2, 1e-2, 1e-2]
+    var1 = [1000, 1000, 1000]
+    var2 = [10, 10, 10]
     P0 = np.diag([*var1, *var1, *var1, *var1, *var2, *var2, *var2, *var2, *var2, *var2])
 
-    xs_, Ps_ = extendedKalmanFilter(model.timeUpdate, x0, P0, H, R, zs, startDate, endDate)
+    xs_ = odeint(model.timeUpdate, x0, np.arange(0, T, 0.1))
+    Ps_ = [np.eye(30) for _ in np.arange(0, T, 0.1)]
+    # xs_, Ps_ = extendedKalmanFilter(model.timeUpdate, x0, P0, H, R, zs, startDate, endDate)
 
     pltColumn(-4)
+    pltColumn(-5)
+    pltColumn(-6)
     plt.show()
 
 if __name__ == "__main__" : 
