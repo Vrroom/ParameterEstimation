@@ -16,7 +16,6 @@ def odeSimulator (model, x0, T) :
 class KalmanSimulator () :
 
     def __init__ (self, data, model, x0) : 
-        # TODO : Probably ALL NUMBERS HAVE TO BE TUNED
         self.x0 = x0
 
         self.data = data
@@ -44,8 +43,14 @@ class KalmanSimulator () :
         self.h1[24:27] = model.mortality.tolist() # Setting mortality
         self.h2[-6:-3] = [1,1,1] # Setting P
 
-        self.P0 = np.diag(1e2 * np.ones(30))
-        self.Q  = np.diag(1e4 * np.ones(30))
+        self.setP0() 
+        self.setQ()
+
+    def setP0(self) : 
+        self.P0 = np.diag([1e2] * 12 + [1] * 18)
+
+    def setQ (self) :
+        self.Q = np.diag([1e2] * 24 + [10] * 6)
     
     def splitDates (self, date) : 
         d, m, _ = date.split('-')
