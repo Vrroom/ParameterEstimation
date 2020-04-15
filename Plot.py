@@ -28,4 +28,4 @@ def statePlot (series, variances, state, beginDate, step) :
         a.xaxis.set_major_locator(ticker.MultipleLocator(step))
         a.set_xticklabels(tickLabels, rotation = 'vertical')
     fig.savefig('./Plots/' + state)
-    fig.close()
+    plt.close(fig)
