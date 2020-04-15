@@ -44,12 +44,12 @@ def extendedKalmanFilter (updateStep, x0, P0, Q, H, R, Z, tStart, tEnd) :
     xPrev = x0
     PPrev = P0
     xs = [x0]
-    Ps = [P0]
+    Ps = [np.diag(P0)]
         
     for i, date in enumerate(DateIter(tStart + 1, tEnd)) :
         # Time update
         xtMinus = updateStep(xPrev, i+1)
-        A, W = getProcessJacobians(partial(updateStep, t=i+1), torch.from_numpy(xPrev))
+        A, W = getProcessJacobians(partial(updateStep, t=i+1, module=torch), torch.from_numpy(xPrev))
         PMinus = A @ PPrev @ A.T + W @ Q @ W.T
 
         # Measurement update
@@ -71,9 +71,9 @@ def extendedKalmanFilter (updateStep, x0, P0, Q, H, R, Z, tStart, tEnd) :
             Pt = PMinus
         
         xs.append(xt)
-        Ps.append(Pt)
-
-    return np.stack(xs), Ps
+        Ps.append(np.diag(Pt))
+    
+    return np.stack(xs), np.stack(Ps)
 
 if __name__ == "__main__" : 
     print(getJacobian(sin, torch.tensor([0., 1.])))

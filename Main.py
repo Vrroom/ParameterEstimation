@@ -9,10 +9,6 @@ import pandas
 
 # Important events
 
-def splitDates (date) : 
-    d, m, _ = date.split('-')
-    d = int(d)
-    return f'{d} {m}'
 
 def processTimeSeries (state) :
     fname = state + '.csv'

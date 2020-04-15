@@ -110,15 +110,6 @@ def getActive (data) :
 def getDailyDeaths (data, startDate, firstDeath) : 
     return data['New Deaths'][firstDeath - startDate:].to_numpy()
 
-def getInfectedAndRecovered(csvFile):
-    data = pandas.read_csv(csvFile)
-    confirmed = data['Total Cases']
-    recovered = data['Total Recoveries']
-    dead      = data['Total Deaths']
-    r = recovered + dead
-    i = confirmed - r
-    return pandas.concat((i, r), axis=1).to_numpy()
-
 def sortAndFlattenDict(d) : 
     return list(unzip(sorted(d.items()))[1])
 
@@ -167,6 +158,11 @@ def getAgeMortality (state) :
 
     return prod/bins
 
+def getData (state) : 
+    fname = state + '.csv'
+    path = osp.join('./Data/time_series/', fname)
+    return pandas.read_csv(path)
+    
 def sigmoid (x) : 
     return 1 / (1 + math.e ** -x)
 

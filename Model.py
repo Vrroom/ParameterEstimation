@@ -28,12 +28,13 @@ STATES = ['ANDAMAN&NICOBARISLANDS', 'ANDHRAPRADESH', 'ARUNACHALPRADESH',
 
 class IndiaModel () : 
 
-    def __init__ (self, transportMatrix, betas, statePop) : 
+    def __init__ (self, transportMatrix, betas, statePop, mortality) : 
         self.transportMatrix = transportMatrix
         self.betas = betas
         self.statePop = statePop
         self.bins = 3
         self.states = len(STATES)
+        self.mortality = mortality
         self.setStateModels()
 
     def dx (self, x, t, module=np) : 
@@ -114,6 +115,7 @@ class IndiaModel () :
             p['lockdownLeakiness'] = lockdownLeakiness
             p['totalOut'] = self.transportMatrix[idx].sum()
             p['Nbar'] = self.statePop[idx]
+            p['mortality'] = self.mortality[idx]
 
             inChannel, outChannel = [], []
             self.links.append((inChannel, outChannel))
@@ -179,6 +181,7 @@ class SpaxireAgeStratified () :
         self.testingFraction2 = params['testingFraction2']
         self.testingFraction3 = params['testingFraction3']
 
+        self.mortality = params['mortality']
         self.totalOut = params['totalOut']
 
         names = ['S', 'E', 'A', 'I', 'Xs', 'Xe', 'Xa', 'Xi', 'P', 'R']
@@ -348,7 +351,7 @@ if __name__ == "__main__" :
     transportMatrix = np.zeros(transportMatrix.shape)
     mortality = [getAgeMortality(s) for s in STATES]
     statePop  = [getStatePop(s) for s in STATES]
-    model = IndiaModel(transportMatrix, betas, statePop) 
+    model = IndiaModel(transportMatrix, betas, statePop, mortality) 
     x0 = []
     for Nbar in statePop : 
         N_ = deepcopy(Nbar)
