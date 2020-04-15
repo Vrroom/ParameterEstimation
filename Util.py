@@ -45,9 +45,17 @@ class Date () :
         return Date(f'{day} {month}')
     
     def __sub__ (self, that) :
-        d1 = datetime.date(2020, self.month, self.day)
-        d2 = datetime.date(2020, that.month, that.day)
-        return (d1 - d2).days
+        if isinstance(that, Date) : 
+            d1 = datetime.date(2020, self.month, self.day)
+            d2 = datetime.date(2020, that.month, that.day)
+            return (d1 - d2).days
+        else : 
+            d1 = datetime.date(2020, self.month, self.day)
+            td = datetime.timedelta(days=-that)
+            d2 = d1 + td
+            month = self.MONTHS[d2.month - 1]
+            day = d2.day
+            return Date(f'{day} {month}')
 
     def __lt__ (self, that) : 
         return (self.month, self.day) < (that.month, that.day)

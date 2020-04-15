@@ -36,7 +36,7 @@ def getModel () :
 if __name__ == "__main__" : 
 
     def pltColumn (idx) : 
-        x = np.arange(T)
+        x = np.arange(T + 10)
 
         dstd = np.sqrt(np.array([np.diag(P)[idx] for P in Ps_]))
         d_  = np.array([x[idx] for x in xs_])
@@ -49,15 +49,41 @@ if __name__ == "__main__" :
         plt.legend()
 
     def H (date) : 
-        h1    = [0,0,0,.02,0,0,0,0,.02,0]
+        h1    = [0,0,0,.02,0,0,0,0.02,.02,0]
         h2    = [0,0,0,0.0,0,0,0,0,1.0,0]
-        zeros = [0,0,0,0.0,0,0,0,0,0.0,0]
         if date < firstCases : 
-            return np.array([h1, zeros])
-        elif date >= firstCases and date < startDate + (endDate - firstDeath) :
+            return np.array([h1])
+        elif firstCases <= date <= endDate - 17 :
             return np.array([h1, h2])
-        else : 
-            return np.array([zeros, h2])
+        elif endDate - 17 < date <= endDate : 
+            return np.array([h2])
+        else :
+            return np.array([])
+
+    def z (date) : 
+        if date < firstCases : 
+            m = deaths[date - startDate]
+            return np.array([m])
+        elif firstCases <= date <= endDate - 17 :
+            m = deaths[date - startDate]
+            p = P[date - firstCases]
+            return np.array([m, p])
+        elif endDate - 17 < date <= endDate : 
+            p = P[date - firstCases]
+            return np.array([p])
+        else :
+            return np.array([])
+
+    def R (date) : 
+        if date < firstCases : 
+            return np.array([1])
+        elif firstCases <= date <= endDate - 17 :
+            return np.eye(2)
+        elif endDate - 17 < date <= endDate : 
+            return np.array([1])
+        else :
+            return np.array([])
+
 
     T = endDate - startDate
     N   = 1.1e8
@@ -66,26 +92,24 @@ if __name__ == "__main__" :
     totalDeaths = data['Total Deaths'].to_numpy()
     
     deaths = data['New Deaths'][data['Total Deaths'] > 0].to_numpy()
-    deaths = np.pad(deaths, ((0, T - deaths.size)))
 
     P = (data['Total Cases'] - data['Total Recoveries'] - data['Total Deaths']).to_numpy()
-    P = np.pad(P, ((T - P.size, 0)))
-
-    zs = np.stack([deaths, P[:]]).T
 
     E0, A0, I0 = 25, 25, 25
     init = np.array([N - E0 - A0 - I0, E0, A0, I0, 0, 0, 0, 0, 0, 0])
 
     model = getModel()
 
-    R = np.diag([1, 1])
-    P0 = np.diag([1e3, 1e3, 1e3, 1e3, 1e-2, 1e-2, 1e-2, 1e-2, 1e-2, 1e-2])
+    P0 = np.diag([1e4, 1e4, 1e4, 1e4, 1e4, 1e4, 1e4, 1e4, 1e4, 1e4])
+    Q = np.diag([1e4, 1e4, 1e4, 1e4, 1e4, 1e4, 1e4, 1e4, 1, 1])
+    Q = np.zeros(P0.shape)
 
-    xs_, Ps_ = extendedKalmanFilter(model.timeUpdate, init, P0, H, R, zs, startDate, endDate)
 
-    plt.scatter(np.arange(T), P, c='red', label='P (Actual Data)')
+    xs_, Ps_ = extendedKalmanFilter(model.timeUpdate, init, P0, Q, H, R, z, startDate, endDate + 10)
+
+    # plt.scatter(, P, c='red', label='P (Actual Data)')
     pltColumn(-2)
-    pltColumn(2)
-    pltColumn(1)
+    # pltColumn(2)
+    # pltColumn(1)
     plt.show()
 
