@@ -11,30 +11,28 @@ import numpy as np
 from Simulate import *
 from copy import deepcopy
 
-# TODO : LOAD POP for each state BOTH IN MODULE AND IN
-# INIT
-# TODO : FIX INITIAL CONDITIONS
 cat = {np : np.hstack, torch : torch.cat}
+
+STATES = ['ANDAMAN&NICOBARISLANDS', 'ANDHRAPRADESH', 'ARUNACHALPRADESH', 
+        'ASSAM', 'BIHAR', 'CHANDIGARH', 'CHHATTISGARH', 
+        'DADRA&NAGARHAVELI', 'DAMAN&DIU', 'GOA', 
+        'GUJARAT', 'HARYANA', 'HIMACHALPRADESH', 
+        'JAMMU&KASHMIR', 'JHARKHAND', 'KARNATAKA', 
+        'KERALA', 'LAKSHADWEEP', 'MADHYAPRADESH',
+        'MAHARASHTRA', 'MANIPUR', 'MEGHALAYA', 
+        'MIZORAM', 'NAGALAND', 'NCTOFDELHI', 
+        'ODISHA', 'PUDUCHERRY', 'PUNJAB', 
+        'RAJASTHAN', 'SIKKIM', 'TAMILNADU', 
+        'TRIPURA', 'UTTARAKHAND', 'UTTARPRADESH', 'WESTBENGAL']
 
 class IndiaModel () : 
 
-    STATES = ['ANDAMAN&NICOBARISLANDS', 'ANDHRAPRADESH', 'ARUNACHALPRADESH', 
-            'ASSAM', 'BIHAR', 'CHANDIGARH', 'CHHATTISGARH', 
-            'DADRA&NAGARHAVELI', 'DAMAN&DIU', 'GOA', 
-            'GUJARAT', 'HARYANA', 'HIMACHALPRADESH', 
-            'JAMMU&KASHMIR', 'JHARKHAND', 'KARNATAKA', 
-            'KERALA', 'LAKSHADWEEP', 'MADHYAPRADESH',
-            'MAHARASHTRA', 'MANIPUR', 'MEGHALAYA', 
-            'MIZORAM', 'NAGALAND', 'NCTOFDELHI', 
-            'ODISHA', 'PUDUCHERRY', 'PUNJAB', 
-            'RAJASTHAN', 'SIKKIM', 'TAMILNADU', 
-            'TRIPURA', 'UTTARAKHAND', 'UTTARPRADESH', 'WESTBENGAL']
-
-    def __init__ (self, transportMatrix, betas) : 
+    def __init__ (self, transportMatrix, betas, statePop) : 
         self.transportMatrix = transportMatrix
         self.betas = betas
+        self.statePop = statePop
         self.bins = 3
-        self.states = len(self.STATES)
+        self.states = len(STATES)
         self.setStateModels()
 
     def dx (self, x, t, module=np) : 
@@ -58,7 +56,8 @@ class IndiaModel () :
             m.receive()
 
         derivatives = [m.addCrossTerms(dx, module) for dx in derivatives]
-        return cat[module](derivatives)
+        dx = cat[module](derivatives)
+        return dx
 
     def setStateModels (self):
         startDate = Date('29 Feb')
@@ -98,7 +97,6 @@ class IndiaModel () :
             'contactHome'       : partial(bumpFn, ti=changeContactStart, tf=changeContactEnd, x1=contactHome, x2=0.5*contactHome),
             'contactTotal'      : partial(bumpFn, ti=changeContactStart, tf=changeContactEnd, x1=contactTotal, x2=0.5*contactTotal),
             'bins'              : 3,
-            'Nbar'              : np.array([40544482., 60315220., 11106935.]),
             'adultBins'         : [1],
             'testingFraction1'  : partial(climbFn, ti=changeKt, tf=changeKt+deltaKt, xi=1/13, xf=0.8),
             'testingFraction2'  : partial(climbFn, ti=changeKt, tf=changeKt+deltaKt, xi=0, xf=0.5),
@@ -107,15 +105,19 @@ class IndiaModel () :
 
         self.models = []
         self.links = []
-        for idx, state in enumerate(self.STATES) : 
+        for idx, state in enumerate(STATES) : 
             beta, lockdownLeakiness = self.betas[state]
+
             p = deepcopy(params)
             p['beta'] = beta
             p['lockdownLeakiness'] = lockdownLeakiness
             p['totalOut'] = self.transportMatrix[idx].sum()
+            p['Nbar'] = self.statePop[idx]
+
             inChannel, outChannel = [], []
             self.links.append((inChannel, outChannel))
-            self.models.append(SpaxireAgeStratified(p, self.transportMatrix, inChannel, outChannel))
+
+            self.models.append(SpaxireAgeStratified(p, inChannel, outChannel))
 
 class SpaxireAgeStratified () : 
     """
@@ -124,7 +126,7 @@ class SpaxireAgeStratified () :
     The constructor takes a dictionary
     of parameters and initializes the model.
     """
-    def __init__ (self, params, idx, inChannel, outChannel) :
+    def __init__ (self, params, inChannel=None, outChannel=None) :
         """
         ODE has a lot of parameters.
         These are present in a dictionary from
@@ -141,7 +143,6 @@ class SpaxireAgeStratified () :
             which are related to how the disease
             spreads aren't so easy to specify.
         """
-        self.idx = idx # Index of this state
 
         self.inChannel = inChannel
         self.outChannel = outChannel
@@ -215,7 +216,7 @@ class SpaxireAgeStratified () :
         self.rIn = sum([data['r'] for data in self.inChannel])
         self.inChannel.clear()
 
-    def dx (self, x, t, module) : 
+    def dx (self, x, t, module=np) : 
         """
         This gives the derivative wrt time
         of the state vector. 
@@ -318,11 +319,11 @@ class SpaxireAgeStratified () :
     def addCrossTerms (self, dx, module=np) : 
         ds, de, da, di, dxs, dxe, dxa, dxi, dp, dr = dx.reshape((-1, self.bins))
 
-        ds  += self.s  * (self.sIn  - self.sOut )
-        de  += self.e  * (self.eIn  - self.eOut )
-        da  += self.a  * (self.aIn  - self.aOut )
-        di  += self.i  * (self.iIn  - self.iOut )
-        dr  += self.r  * (self.rIn  - self.rOut )
+        ds  += (self.sIn  - self.sOut )
+        de  += (self.eIn  - self.eOut )
+        da  += (self.aIn  - self.aOut )
+        di  += (self.iIn  - self.iOut )
+        dr  += (self.rIn  - self.rOut )
 
         return cat[module]((ds, de, da, di, dxs, dxe, dxa, dxi, dp, dr))
 
@@ -334,16 +335,35 @@ def linearApprox (fn, x0, T) :
     out = [x0]
     x = x0
     for t in range(T) : 
+        dx = fn(x, t)
+        print(x[0], dx[0])        
         x = x + fn(x, t)
         out.append(x)
     return np.array(out)
 
 if __name__ == "__main__" :
+    # TODO : LOAD POP for each state BOTH IN MODULE AND IN
+    # INIT
+    # TODO : FIX INITIAL CONDITIONS
+    # TODO : TEST WITH 0 Transport MATRIX TO SEE IF IT WORKS!
     with open('./Data/beta.json') as fd : 
         betas = json.load(fd)
     transportMatrix = np.loadtxt('./Data/transportMatrix.csv', delimiter=',')
-    model = IndiaModel(transportMatrix, betas) 
-    x0 = np.ones(1050)
-    results = linearApprox(model.dx, x0, 4)
-    plt.plot(range(5), results[:, 0])
+    mortality = [getAgeMortality(s) for s in STATES]
+    statePop  = [getStatePop(s) for s in STATES]
+    model = IndiaModel(transportMatrix, betas, statePop) 
+    x0 = []
+    for Nbar in statePop : 
+        N_ = deepcopy(Nbar)
+        E0 = [0, 10, 0]
+        A0 = [0, 10, 0]
+        I0 = [0, 10, 0]
+        ZE = [0, 0, 0]
+        N_[1] -= 30
+        x = [*N_, *E0, *A0, *I0, *ZE, *ZE, *ZE, *ZE, *ZE, *ZE]
+        x0.extend(x)
+    x0 = np.array(x0)
+    results = linearApprox(model.dx, x0, 50)
+    print(results[:, 0])
+    plt.plot(range(51), results[:, 0])
     plt.show()

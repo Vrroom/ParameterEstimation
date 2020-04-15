@@ -144,7 +144,9 @@ def estimate (state) :
     var2 = [10, 10, 10]
     P0 = np.diag([*var1, *var1, *var1, *var1, *var2, *var2, *var2, *var2, *var2, *var2])
 
-    xs_ = odeint(model.timeUpdate, x0, np.arange(0, T, 0.1))
+    T = 2000
+
+    xs_ = odeint(model.dx, x0, np.arange(0, T, 0.1))
     Ps_ = [np.eye(30) for _ in np.arange(0, T, 0.1)]
     # xs_, Ps_ = extendedKalmanFilter(model.timeUpdate, x0, P0, H, R, zs, startDate, endDate)
 
@@ -157,7 +159,7 @@ if __name__ == "__main__" :
 #    states = os.listdir('./Data/ageBins/')
 #    states = map(osp.splitext, states)
 #    states = [s for s, _ in states]
-    estimate('MH')
+    estimate('MAHARASHTRA')
 #     for s in states : 
 #         try : 
 #             betas = estimate(s)

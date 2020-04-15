@@ -146,7 +146,7 @@ def bumpFn (t, ti, tf, x1, x2) :
     else :
         return x2
 
-def readStatePop (state) : 
+def getStatePop (state) : 
     fname = state + '.csv'
     path = osp.join('./Data/population/', fname)
     return np.loadtxt(path, delimiter=',', usecols=(1))
