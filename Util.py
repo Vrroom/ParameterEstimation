@@ -1,11 +1,13 @@
 import more_itertools
 import contextlib
+import math
 import pandas
 import sys
 import numpy as np
 from itertools import product
 import datetime
 import os
+import os.path as osp
 
 class DateIter () : 
     def __init__ (self, start, end) :
@@ -123,3 +125,51 @@ def sortAndFlattenDict(d) :
 def dictProduct (d) : 
     return map(dict, product(*map(lambda x : product([x[0]], x[1]), d.items())))
 
+def climbFn (t, ti, tf, xi, xf) : 
+    if t > tf : 
+        return xf
+    elif ti < t < tf : 
+        wt = (t - ti) / (tf - ti)
+        return xf * wt + xi * (1 - wt)
+    else : 
+        return xi
+
+def stepFn (t, t0, x1, x2) : 
+    if t > t0 : 
+        return x2
+    else :
+        return x1
+
+def bumpFn (t, ti, tf, x1, x2) : 
+    if t < ti or t > tf : 
+        return x1
+    else :
+        return x2
+
+def getStatePop (state) : 
+    fname = state + '.csv'
+    path = osp.join('./Data/population/', fname)
+    return np.loadtxt(path, delimiter=',', usecols=(1))
+
+def getAgeMortality (state) : 
+    ageWise = np.loadtxt('./Data/ageWiseMortality.csv', delimiter=',', usecols=(1))
+
+    fname = state + '.csv'
+    path = osp.join('./Data/ageBins/', fname)
+
+    pop = np.loadtxt(path, delimiter=',', usecols=(1))
+    pop = np.hstack((pop[:ageWise.size-1],pop[ageWise.size-1:].sum())) 
+
+    prod = pop * ageWise
+
+    prod = np.array([prod[:2].sum(), prod[2:6].sum(), prod[6:].sum()])
+    bins = np.array([pop[:2].sum(), pop[2:6].sum(), pop[6:].sum()])
+
+    return prod/bins
+
+def sigmoid (x) : 
+    return 1 / (1 + math.e ** -x)
+
+if __name__ == "__main__" : 
+    m = getAgeMortality('MAHARASHTRA')
+    print(m)

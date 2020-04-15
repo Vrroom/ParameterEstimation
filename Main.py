@@ -1,4 +1,5 @@
 from Model import *
+import os.path as osp
 from Search import *
 from Losses import *
 from itertools import product
@@ -7,36 +8,97 @@ import numpy as np
 import pandas
 
 # Important events
-startDate = Date('29 Feb')
-firstCases = Date('14 Mar')
-firstDeath = Date('17 Mar')
-endDate = Date('7 Apr')
 
-def getModel () : 
-    lockdownBegin = Date('24 Mar') - startDate
-    lockdownEnd = Date('14 Apr') - startDate
+def splitDates (date) : 
+    d, m, _ = date.split('-')
+    d = int(d)
+    return f'{d} {m}'
+
+def processTimeSeries (state) :
+    fname = state + '.csv'
+    path = osp.join('./Data/time_series', fname)
+    data = pandas.read_csv(path)
+
+    dates = data['Date'].map(splitDates)
+    if dates[data['Total Dead'] > 0].size == 0 : 
+        raise Exception
+
+    firstCases = Date(dates[0])
+    firstDeath = Date(dates[data['Total Dead'] > 0].iloc[0])
+    startDate = firstDeath - 17
+    endDate = Date(dates.iloc[-1])
+
+    T = endDate - startDate
+
+    totalDeaths = data['Total Dead'].to_numpy()
+    
+    deaths = data['Daily Dead'][data['Total Dead'] > 0].to_numpy()
+
+    if T > deaths.size :
+        deaths = np.pad(deaths, ((0, T - deaths.size)))
+
+    P = (data['Total Cases'] - data['Total Recovered'] - data['Total Dead']).to_numpy()
+
+    if T > P.size :
+        P = np.pad(P, ((T - P.size, 0)))
+    else : 
+        P = P[startDate - firstCases + 1:]
+
+    zs = np.stack([deaths, P]).T
+
+    return startDate, firstCases, firstDeath, endDate, zs
+
+
+def getModel (state) : 
+    startDate, firstCases, firstDeath, endDate, _ = processTimeSeries(state)
+
+    lockdownBegin = Date('24 Mar') - startDate + 100
+    lockdownEnd = Date('14 Apr') - startDate + 100
+
+    contactHome = np.loadtxt('./Data/home.csv', delimiter=',')
+    contactTotal = np.loadtxt('./Data/total.csv', delimiter=',')
+
+    changeContactStart = math.inf
+    changeContactEnd   = math.inf
+
+    changeKt = math.inf
+    deltaKt  = math.inf
+
+    Nbar = readStatePop(state)
+
     params = {
-        'tl'    : lockdownBegin, 
-        'te'    : lockdownEnd,
-        'k0'    : 1/7, 
-        'kt'    : 0.075,
-        'mu'    : 1/7,
-        'sigma' : 1/5,
-        'gamma1': 1/21,
-        'gamma2': 1/21,
-        'gamma3': 1/17,
-        'N'     : 1.1e8,
-        'beta'  : 0.16,
-        'beta1' : 1.8,
-        'beta2' : 0.1,
-        'f'     : 0.1
+        'tl'                : lockdownBegin, 
+        'te'                : lockdownEnd,
+        'k0'                : partial(bumpFn, ti=lockdownBegin, tf=lockdownEnd, x1=0, x2=1/7),
+        'kt'                : partial(climbFn, ti=changeKt, tf=changeKt+deltaKt, xi=0.5, xf=1.0),
+        'mu'                : partial(stepFn, t0=lockdownEnd, x1=0, x2=1/7),
+        'sigma'             : 1/5,
+        'gamma1'            : 1/21,
+        'gamma2'            : 1/21,
+        'gamma3'            : 1/19,
+        'N'                 : 1.1e8,
+        'beta'              : 0.015,
+        'beta2'             : 0.1,
+        'f'                 : 0.2,
+        'lockdownLeakiness' : 0.9,
+        'contactHome'       : partial(bumpFn, ti=changeContactStart, tf=changeContactEnd, x1=contactHome, x2=0.5*contactHome),
+        'contactTotal'      : partial(bumpFn, ti=changeContactStart, tf=changeContactEnd, x1=contactTotal, x2=0.5*contactTotal),
+        'bins'              : 3,
+        'Nbar'              : Nbar,
+        'adultBins'         : [1],
+        'testingFraction1'  : partial(climbFn, ti=changeKt, tf=changeKt+deltaKt, xi=1/13, xf=0.8),
+        'testingFraction2'  : partial(climbFn, ti=changeKt, tf=changeKt+deltaKt, xi=0, xf=0.5),
+        'testingFraction3'  : partial(climbFn, ti=changeKt, tf=changeKt+deltaKt, xi=0, xf=0.5),
     }
-    return Spaxire(params)
 
-if __name__ == "__main__" : 
+    model = SpaxireAgeStratified(params)
+    return model
+
+def estimate (state) : 
 
     def pltColumn (idx) : 
         x = np.arange(T + 10)
+        x = np.arange(0, T, 0.1)
 
         dstd = np.sqrt(np.array([np.diag(P)[idx] for P in Ps_]))
         d_  = np.array([x[idx] for x in xs_])
@@ -84,9 +146,8 @@ if __name__ == "__main__" :
         else :
             return np.array([])
 
-
-    T = endDate - startDate
-    N   = 1.1e8
+    m = (getAgeMortality(state) * 0.01).tolist()
+    startDate, firstCases, firstDeath, endDate, zs = processTimeSeries(state)
 
     data = pandas.read_csv('./Data/maha_data7apr.csv')
     totalDeaths = data['Total Deaths'].to_numpy()
@@ -94,22 +155,42 @@ if __name__ == "__main__" :
     deaths = data['New Deaths'][data['Total Deaths'] > 0].to_numpy()
 
     P = (data['Total Cases'] - data['Total Recoveries'] - data['Total Deaths']).to_numpy()
+    T = endDate - startDate
 
-    E0, A0, I0 = 25, 25, 25
-    init = np.array([N - E0 - A0 - I0, E0, A0, I0, 0, 0, 0, 0, 0, 0])
+    model = getModel(state)
+    Nbar = readStatePop(state)
 
-    model = getModel()
+    E0 = [0, 10, 0]
+    A0 = [0, 10, 0]
+    I0 = [0, 10, 0]
+    Nbar[1] -= 30
+    x0 = np.array([*(Nbar.tolist()), *E0, *A0, *I0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0])
 
-    P0 = np.diag([1e4, 1e4, 1e4, 1e4, 1e4, 1e4, 1e4, 1e4, 1e4, 1e4])
-    Q = np.diag([1e4, 1e4, 1e4, 1e4, 1e4, 1e4, 1e4, 1e4, 1, 1])
-    Q = np.zeros(P0.shape)
+    R = np.diag([5, 5])
 
+    var1 = [1000, 1000, 1000]
+    var2 = [10, 10, 10]
+    P0 = np.diag([*var1, *var1, *var1, *var1, *var2, *var2, *var2, *var2, *var2, *var2])
 
-    xs_, Ps_ = extendedKalmanFilter(model.timeUpdate, init, P0, Q, H, R, z, startDate, endDate + 10)
+    T = 2000
 
-    # plt.scatter(, P, c='red', label='P (Actual Data)')
-    pltColumn(-2)
-    # pltColumn(2)
-    # pltColumn(1)
+    xs_ = odeint(model.dx, x0, np.arange(0, T, 0.1))
+    Ps_ = [np.eye(30) for _ in np.arange(0, T, 0.1)]
+    # xs_, Ps_ = extendedKalmanFilter(model.timeUpdate, x0, P0, H, R, zs, startDate, endDate)
+
+    pltColumn(-4)
+    pltColumn(-5)
+    pltColumn(-6)
     plt.show()
 
+if __name__ == "__main__" : 
+#    states = os.listdir('./Data/ageBins/')
+#    states = map(osp.splitext, states)
+#    states = [s for s, _ in states]
+    estimate('MAHARASHTRA')
+#     for s in states : 
+#         try : 
+#             betas = estimate(s)
+#             print(s, betas)
+#         except Exception : 
+#             continue
