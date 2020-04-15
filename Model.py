@@ -10,6 +10,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 from Simulate import *
 from copy import deepcopy
+from Plot import * 
 
 cat = {np : np.hstack, torch : torch.cat}
 
@@ -336,19 +337,15 @@ def linearApprox (fn, x0, T) :
     x = x0
     for t in range(T) : 
         dx = fn(x, t)
-        print(x[0], dx[0])        
         x = x + fn(x, t)
         out.append(x)
     return np.array(out)
 
 if __name__ == "__main__" :
-    # TODO : LOAD POP for each state BOTH IN MODULE AND IN
-    # INIT
-    # TODO : FIX INITIAL CONDITIONS
-    # TODO : TEST WITH 0 Transport MATRIX TO SEE IF IT WORKS!
     with open('./Data/beta.json') as fd : 
         betas = json.load(fd)
     transportMatrix = np.loadtxt('./Data/transportMatrix.csv', delimiter=',')
+    transportMatrix = np.zeros(transportMatrix.shape)
     mortality = [getAgeMortality(s) for s in STATES]
     statePop  = [getStatePop(s) for s in STATES]
     model = IndiaModel(transportMatrix, betas, statePop) 
@@ -364,6 +361,6 @@ if __name__ == "__main__" :
         x0.extend(x)
     x0 = np.array(x0)
     results = linearApprox(model.dx, x0, 50)
-    print(results[:, 0])
-    plt.plot(range(51), results[:, 0])
-    plt.show()
+    results = results.T.reshape((len(STATES), 30, -1))
+    for r, s in zip(results, STATES) : 
+        statePlot(r.T, s, Date('29 Feb'), 3)
