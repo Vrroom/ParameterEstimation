@@ -116,6 +116,7 @@ class KalmanSimulator () :
                 self.model.timeUpdate, self.x0, self.P0, 
                 self.Q, self.H, self.R, self.Z, 
                 self.startDate, endDate)
+        print(variances[0].shape)
         return series, variances
 
 if __name__ == "__main__" : 
@@ -134,4 +135,4 @@ if __name__ == "__main__" :
         x0 = np.array([*(nbar.tolist()), *E0, *A0, *I0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0])
         ks = KalmanSimulator(datum, m, x0)
         series, variances = ks(50)
-        Plot.statePlot(series, variances, state, ks.startDate, 3)
+        Plot.statePlot(series, variances, state, ks.startDate, 3, datum)

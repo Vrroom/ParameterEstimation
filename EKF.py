@@ -44,7 +44,7 @@ def extendedKalmanFilter (updateStep, x0, P0, Q, H, R, Z, tStart, tEnd) :
     xPrev = x0
     PPrev = P0
     xs = [x0]
-    Ps = [np.diag(P0)]
+    Ps = [P0]
         
     for i, date in enumerate(DateIter(tStart + 1, tEnd)) :
         # Time update
@@ -72,7 +72,7 @@ def extendedKalmanFilter (updateStep, x0, P0, Q, H, R, Z, tStart, tEnd) :
         
         xs.append(xt)
         Ps.append(Pt)
-    
+
     return np.stack(xs), Ps
 
 if __name__ == "__main__" : 
