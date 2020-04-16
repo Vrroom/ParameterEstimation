@@ -47,10 +47,10 @@ class KalmanSimulator () :
         self.setQ()
 
     def setP0(self) : 
-        self.P0 = np.diag([1] * 12 + [1] * 18)
+        self.P0 = np.eye(30)
 
     def setQ (self) :
-        self.Q = np.diag([1] * 24 + [1] * 6)
+        self.Q = np.eye(30)
     
     def splitDates (self, date) : 
         d, m, _ = date.split('-')
@@ -97,16 +97,16 @@ class KalmanSimulator () :
     def R (self, date): 
         if self.peopleDied : 
             if date < self.firstCases : 
-                return np.array([5])
+                return np.array([1])
             elif self.firstCases <= date <= self.dataEndDate - 17 :
                 return np.eye(2)
             elif self.dataEndDate - 17 < date <= self.dataEndDate : 
-                return np.array([5])
+                return np.array([1])
             else :
                 return np.array([])
         else : 
             if date <= self.dataEndDate : 
-                return np.array([5])
+                return np.array([1])
             else : 
                 return np.array([])
 
@@ -133,5 +133,5 @@ if __name__ == "__main__" :
         nbar[1] -= 30
         x0 = np.array([*(nbar.tolist()), *E0, *A0, *I0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0])
         ks = KalmanSimulator(datum, m, x0)
-        series, variances = ks(Date('3 May') - ks.startDate)
+        series, variances = ks(Date('30 June') - ks.startDate)
         Plot.statePlot(series, variances, state, ks.startDate, 3, datum)
