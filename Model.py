@@ -107,7 +107,7 @@ class IndiaModel () :
                 'tl'                : lockdownBegin, 
                 'te'                : lockdownEnd,
                 'k0'                : partial(bumpFn, ti=lockdownBegin, tf=lockdownEnd, x1=0, x2=1/7),
-                'kt'                : partial(climbFn, ti=changeKt, tf=changeKt+deltaKt, xi=0.5, xf=1.0),
+                'kt'                : partial(stepFn, t0=changeKt, x1=0.5, x2=1.0),
                 'mu'                : partial(stepFn, t0=lockdownEnd, x1=0, x2=1/7),
                 'sigma'             : 1/5,
                 'gamma1'            : 1/21,
