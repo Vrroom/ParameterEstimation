@@ -170,7 +170,7 @@ if __name__ == "__main__" :
         pickle.dump(seriesOfVariances, fd)
 
     for m, datum, series, variance ,state in zip(model.models, data, seriesOfSeries, seriesOfVariances, Model.STATES) : 
-        statePlot(series, variance, state, m.startDate, 3, datum)
+        Plot.statePlot(series, variance, state, m.startDate, 3, datum)
 
     
 
