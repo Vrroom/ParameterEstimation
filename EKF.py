@@ -61,11 +61,15 @@ def extendedKalmanFilter (updateStep, x0, P0, Q, H, R, Z, tStart, tEnd) :
             xt = xtMinus + K @ (z - h @ xtMinus)
             Pt = (np.eye(PPrev.shape[0]) - K @ h) @ PMinus
 
+            xt[xt < 0] = np.maximum(xt[xt < 0], np.maximum(0, xPrev[xt < 0])) # Shameless Hack
+
             xPrev = xt
             PPrev = Pt
         else : 
             xPrev = xtMinus
             PPrev = PMinus
+
+            xt[xt < 0] = np.maximum(xt[xt < 0], np.maximum(0, xPrev[xt < 0])) # Shameless Hack
 
             xt = xtMinus
             Pt = PMinus

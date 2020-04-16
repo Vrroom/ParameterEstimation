@@ -28,14 +28,20 @@ STATES = ['ANDAMAN&NICOBARISLANDS', 'ANDHRAPRADESH', 'ARUNACHALPRADESH',
 
 class IndiaModel () : 
 
-    def __init__ (self, transportMatrix, betas, statePop, mortality) : 
+    def __init__ (self, transportMatrix, betas, statePop, mortality, data) : 
         self.transportMatrix = transportMatrix
         self.betas = betas
         self.statePop = statePop
         self.bins = 3
         self.states = len(STATES)
         self.mortality = mortality
+        self.data = data
         self.setStateModels()
+
+    def splitDates (self, date) : 
+        d, m, _ = date.split('-')
+        d = int(d)
+        return f'{d} {m}'
 
     def dx (self, x, t, module=np) : 
         xs = x.reshape((self.states, -1))
@@ -50,7 +56,7 @@ class IndiaModel () :
             for j in range(self.states) :
                 data_ = deepcopy(data)
                 for key in data.keys() : 
-                    data_[key] *= self.transportMatrix[i, j]
+                    data_[key] *= self.transportMatrix[j, i]
                 inChannel, _ = self.links[j]
                 inChannel.append(data_)
 
@@ -62,65 +68,69 @@ class IndiaModel () :
         return dx
 
     def setStateModels (self):
-        startDate = Date('29 Feb')
-        firstCases = Date('14 Mar')
-        firstDeath = Date('17 Mar')
-        endDate = Date('7 Apr')
-
-        changeKt = Date('27 Mar') - startDate
-
-        lockdownBegin = Date('24 Mar') - startDate
-        lockdownEnd = Date('14 Apr') - startDate
-
-        contactHome = np.loadtxt('./Data/home.csv', delimiter=',')
-        contactTotal = np.loadtxt('./Data/total.csv', delimiter=',')
-
-        changeContactStart = math.inf
-        changeContactEnd   = math.inf
-
-        changeKt = math.inf
-        deltaKt  = math.inf
-
-        params = {
-            'tl'                : lockdownBegin, 
-            'te'                : lockdownEnd,
-            'k0'                : partial(bumpFn, ti=lockdownBegin, tf=lockdownEnd, x1=0, x2=1/7),
-            'kt'                : partial(climbFn, ti=changeKt, tf=changeKt+deltaKt, xi=0.5, xf=1.0),
-            'mu'                : partial(stepFn, t0=lockdownEnd, x1=0, x2=1/7),
-            'sigma'             : 1/5,
-            'gamma1'            : 1/21,
-            'gamma2'            : 1/21,
-            'gamma3'            : 1/19,
-            'N'                 : 1.1e8,
-            'beta'              : 0.015,
-            'beta2'             : 0.1,
-            'f'                 : 0.2,
-            'lockdownLeakiness' : 0.9,
-            'contactHome'       : partial(bumpFn, ti=changeContactStart, tf=changeContactEnd, x1=contactHome, x2=0.5*contactHome),
-            'contactTotal'      : partial(bumpFn, ti=changeContactStart, tf=changeContactEnd, x1=contactTotal, x2=0.5*contactTotal),
-            'bins'              : 3,
-            'adultBins'         : [1],
-            'testingFraction1'  : partial(climbFn, ti=changeKt, tf=changeKt+deltaKt, xi=1/13, xf=0.8),
-            'testingFraction2'  : partial(climbFn, ti=changeKt, tf=changeKt+deltaKt, xi=0, xf=0.5),
-            'testingFraction3'  : partial(climbFn, ti=changeKt, tf=changeKt+deltaKt, xi=0, xf=0.5),
-        }
-
         self.models = []
         self.links = []
         for idx, state in enumerate(STATES) : 
+            datum = self.data[idx]
+
+            dates = datum['Date'].map(self.splitDates)
+
+            firstCases = Date(dates.iloc[0])
+            dataEndDate = Date(dates.iloc[-1])
+            peopleDied = dates[datum['Total Dead'] > 0].size > 0
+            if peopleDied : 
+                firstDeath = Date(dates[datum['Total Dead'] > 0].iloc[0])
+                startDate = firstDeath - 17
+            else : 
+                startDate = firstCases
+
+            changeKt = Date('27 Mar') - startDate
+
+            lockdownBegin = Date('24 Mar') - startDate
+            lockdownEnd = Date('3 May') - startDate
+
+            contactHome = np.loadtxt('./Data/home.csv', delimiter=',')
+            contactTotal = np.loadtxt('./Data/total.csv', delimiter=',')
+
+            changeContactStart = math.inf
+            changeContactEnd   = math.inf
+
+            changeKt = math.inf
+            deltaKt  = math.inf
+
             beta, lockdownLeakiness = self.betas[state]
 
-            p = deepcopy(params)
-            p['beta'] = beta
-            p['lockdownLeakiness'] = lockdownLeakiness
-            p['totalOut'] = self.transportMatrix[idx].sum()
-            p['Nbar'] = self.statePop[idx]
-            p['mortality'] = self.mortality[idx]
+            params = {
+                'tl'                : lockdownBegin, 
+                'te'                : lockdownEnd,
+                'k0'                : partial(bumpFn, ti=lockdownBegin, tf=lockdownEnd, x1=0, x2=1/7),
+                'kt'                : partial(climbFn, ti=changeKt, tf=changeKt+deltaKt, xi=0.5, xf=1.0),
+                'mu'                : partial(stepFn, t0=lockdownEnd, x1=0, x2=1/7),
+                'sigma'             : 1/5,
+                'gamma1'            : 1/21,
+                'gamma2'            : 1/21,
+                'gamma3'            : 1/19,
+                'N'                 : 1.1e8,
+                'beta'              : beta,
+                'beta2'             : 0.1,
+                'f'                 : 0.2,
+                'lockdownLeakiness' : lockdownLeakiness,
+                'contactHome'       : partial(bumpFn, ti=changeContactStart, tf=changeContactEnd, x1=contactHome, x2=0.5*contactHome),
+                'contactTotal'      : partial(bumpFn, ti=changeContactStart, tf=changeContactEnd, x1=contactTotal, x2=0.5*contactTotal),
+                'bins'              : 3,
+                'adultBins'         : [1],
+                'testingFraction1'  : partial(climbFn, ti=changeKt, tf=changeKt+deltaKt, xi=1/13, xf=0.8),
+                'testingFraction2'  : partial(climbFn, ti=changeKt, tf=changeKt+deltaKt, xi=0, xf=0.5),
+                'testingFraction3'  : partial(climbFn, ti=changeKt, tf=changeKt+deltaKt, xi=0, xf=0.5),
+                'totalOut'          : self.transportMatrix[:, idx].sum(),
+                'Nbar'              : self.statePop[idx],
+                'mortality'         : self.mortality[idx]
+            }
 
             inChannel, outChannel = [], []
             self.links.append((inChannel, outChannel))
 
-            self.models.append(SpaxireAgeStratified(p, inChannel, outChannel))
+            self.models.append(SpaxireAgeStratified(params, inChannel, outChannel))
 
 class SpaxireAgeStratified () : 
     """
@@ -195,13 +205,13 @@ class SpaxireAgeStratified () :
         self.colors = list(zip(r,g,b))
 
     def send (self) : 
-        bottom = self.s + self.e + self.a + self.i + self.r
+        Q = self.s + self.e + self.a + self.i + self.r
 
-        sOut = self.s / bottom
-        eOut = self.e / bottom
-        aOut = self.a / bottom
-        iOut = self.i / bottom
-        rOut = self.r / bottom 
+        sOut = Q * self.s / (self.Nbar**2)
+        eOut = Q * self.e / (self.Nbar**2) 
+        aOut = Q * self.a / (self.Nbar**2) 
+        iOut = Q * self.i / (self.Nbar**2) 
+        rOut = Q * self.r / (self.Nbar**2) 
 
         data = {'s': sOut, 'e': eOut, 'a' : aOut, 'i' : iOut, 'r' : rOut} 
         self.outChannel.append(data)
@@ -241,11 +251,11 @@ class SpaxireAgeStratified () :
         if module == torch : 
             ct   = torch.from_numpy(self.contactTotal(t))
             ch   = torch.from_numpy(self.contactHome(t))
-            Nbar = torch.from_numpy(self.Nbar)
         else : 
             ct = self.contactTotal(t)
             ch = self.contactHome(t)
-            Nbar = self.Nbar
+
+        self.Nbar = s + e + a + i + xs + xe + xa + xi + p + r
 
         b3 = 0.002 * self.lockdownLeakiness
 
@@ -253,15 +263,15 @@ class SpaxireAgeStratified () :
         cl2 = ct * (self.lockdownLeakiness**2) + ch * (1.0 - self.lockdownLeakiness**2) 
 
         # lambda for non-lockdown
-        current = ct * (i + a + self.beta2*e) / Nbar
-        current += cl * (xi + xa + self.beta2*xe) / Nbar
-        current[self.adultBins] += ct[self.adultBins, :] * b3 * p / Nbar[self.adultBins]
+        current = ct * (i + a + self.beta2*e) / self.Nbar
+        current += cl * (xi + xa + self.beta2*xe) / self.Nbar
+        current[self.adultBins] += ct[self.adultBins, :] * b3 * p / self.Nbar[self.adultBins]
         lambdaNormal = module.sum(self.beta * current, axis=1)
 
         # lambda for lockdown
-        current = cl * (i + a + self.beta2*e) / Nbar
-        current += cl2 * (xi + xa + self.beta2*xe) / Nbar
-        current[self.adultBins] += cl[self.adultBins, :] * b3 * p / Nbar[self.adultBins]
+        current = cl * (i + a + self.beta2*e) / self.Nbar
+        current += cl2 * (xi + xa + self.beta2*xe) / self.Nbar
+        current[self.adultBins] += cl[self.adultBins, :] * b3 * p / self.Nbar[self.adultBins]
         lambdaLockdown = module.sum(self.beta * current, axis=1)
 
         ds = -s * (lambdaNormal + self.k0(t)) + self.mu(t) * xs 
@@ -323,11 +333,11 @@ class SpaxireAgeStratified () :
     def addCrossTerms (self, dx, module=np) : 
         ds, de, da, di, dxs, dxe, dxa, dxi, dp, dr = dx.reshape((-1, self.bins))
 
-        ds  += (self.sIn  - self.sOut )
-        de  += (self.eIn  - self.eOut )
-        da  += (self.aIn  - self.aOut )
-        di  += (self.iIn  - self.iOut )
-        dr  += (self.rIn  - self.rOut )
+        ds  += (self.sIn  - self.sOut)
+        de  += (self.eIn  - self.eOut)
+        da  += (self.aIn  - self.aOut)
+        di  += (self.iIn  - self.iOut)
+        dr  += (self.rIn  - self.rOut)
 
         return cat[module]((ds, de, da, di, dxs, dxe, dxa, dxi, dp, dr))
 
@@ -348,7 +358,6 @@ if __name__ == "__main__" :
     with open('./Data/beta.json') as fd : 
         betas = json.load(fd)
     transportMatrix = np.loadtxt('./Data/transportMatrix.csv', delimiter=',')
-    transportMatrix = np.zeros(transportMatrix.shape)
     mortality = [getAgeMortality(s) for s in STATES]
     statePop  = [getStatePop(s) for s in STATES]
     model = IndiaModel(transportMatrix, betas, statePop, mortality) 
@@ -364,6 +373,6 @@ if __name__ == "__main__" :
         x0.extend(x)
     x0 = np.array(x0)
     results = linearApprox(model.dx, x0, 50)
-    results = results.T.reshape((len(STATES), 30, -1))
-    for r, s in zip(results, STATES) : 
-        statePlot(r.T, s, Date('29 Feb'), 3)
+    # results = results.T.reshape((len(STATES), 30, -1))
+    # for r, s in zip(results, STATES) : 
+    #     statePlot(r.T, s, Date('29 Feb'), 3)
