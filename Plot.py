@@ -6,7 +6,11 @@ from Model import *
 from Simulate import *
 from more_itertools import collapse
 
+def gather(T, series, variances, indices):
+    output = np.zeros(())
+
 def statePlot (series, variances, state, beginDate, step) : 
+    print(variances[0].shape)
     T, _ = series.shape
     compartments = ['S', 'E', 'A', 'I', 'Xs', 'Xe', 'Xa', 'Xi', 'P', 'R']
     bins = ['0-20', '20-60', '60+']
