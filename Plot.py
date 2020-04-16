@@ -56,7 +56,7 @@ def statePlot (series, variances, state, beginDate, step, groundTruth) :
     # ax1.scatter(np.arange(len(groundTruthPositive)), groundTruthPositive, c= colors[2], label = "Reported Positive")
     ax1.scatter(np.arange(0), [], c= colors[2], label = "Reported Positive")
     
-    ax1.legend(fontsize = 20)
+    ax1.legend(fontsize = 20, loc="upper left")
     ax1.set_xlabel('Time / days', fontsize=25)
     ax1.set_ylabel('Number of people', fontsize=25)
     # ax1.set_yscale('log')
@@ -69,7 +69,7 @@ def statePlot (series, variances, state, beginDate, step, groundTruth) :
     left, bottom, width, height = [0.17, 0.37, 0.35, 0.35]
     ax2 = fig.add_axes([left, bottom, width, height])
     T2 = Date('15 Apr') - beginDate
-    print(beginDate.date)
+    print(state, beginDate.date)
     
     p = p[:T2]
     p_std = p_std[:T2]
