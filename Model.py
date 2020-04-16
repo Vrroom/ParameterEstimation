@@ -50,7 +50,7 @@ class IndiaModel () :
             for j in range(self.states) :
                 data_ = deepcopy(data)
                 for key in data.keys() : 
-                    data_[key] *= self.transportMatrix[i, j]
+                    data_[key] *= self.transportMatrix[j, i]
                 inChannel, _ = self.links[j]
                 inChannel.append(data_)
 
@@ -113,7 +113,7 @@ class IndiaModel () :
             p = deepcopy(params)
             p['beta'] = beta
             p['lockdownLeakiness'] = lockdownLeakiness
-            p['totalOut'] = self.transportMatrix[idx].sum()
+            p['totalOut'] = self.transportMatrix[:, idx].sum()
             p['Nbar'] = self.statePop[idx]
             p['mortality'] = self.mortality[idx]
 
@@ -195,13 +195,13 @@ class SpaxireAgeStratified () :
         self.colors = list(zip(r,g,b))
 
     def send (self) : 
-        bottom = self.s + self.e + self.a + self.i + self.r
+        Q = self.s + self.e + self.a + self.i + self.r
 
-        sOut = self.s / bottom
-        eOut = self.e / bottom
-        aOut = self.a / bottom
-        iOut = self.i / bottom
-        rOut = self.r / bottom 
+        sOut = Q * self.s / (self.Nbar**2)
+        eOut = Q * self.e / (self.Nbar**2) 
+        aOut = Q * self.a / (self.Nbar**2) 
+        iOut = Q * self.i / (self.Nbar**2) 
+        rOut = Q * self.r / (self.Nbar**2) 
 
         data = {'s': sOut, 'e': eOut, 'a' : aOut, 'i' : iOut, 'r' : rOut} 
         self.outChannel.append(data)
@@ -241,11 +241,11 @@ class SpaxireAgeStratified () :
         if module == torch : 
             ct   = torch.from_numpy(self.contactTotal(t))
             ch   = torch.from_numpy(self.contactHome(t))
-            Nbar = torch.from_numpy(self.Nbar)
         else : 
             ct = self.contactTotal(t)
             ch = self.contactHome(t)
-            Nbar = self.Nbar
+
+        self.Nbar = s + e + a + i + xs + xe + xa + xi + p + r
 
         b3 = 0.002 * self.lockdownLeakiness
 
@@ -253,15 +253,15 @@ class SpaxireAgeStratified () :
         cl2 = ct * (self.lockdownLeakiness**2) + ch * (1.0 - self.lockdownLeakiness**2) 
 
         # lambda for non-lockdown
-        current = ct * (i + a + self.beta2*e) / Nbar
-        current += cl * (xi + xa + self.beta2*xe) / Nbar
-        current[self.adultBins] += ct[self.adultBins, :] * b3 * p / Nbar[self.adultBins]
+        current = ct * (i + a + self.beta2*e) / self.Nbar
+        current += cl * (xi + xa + self.beta2*xe) / self.Nbar
+        current[self.adultBins] += ct[self.adultBins, :] * b3 * p / self.Nbar[self.adultBins]
         lambdaNormal = module.sum(self.beta * current, axis=1)
 
         # lambda for lockdown
-        current = cl * (i + a + self.beta2*e) / Nbar
-        current += cl2 * (xi + xa + self.beta2*xe) / Nbar
-        current[self.adultBins] += cl[self.adultBins, :] * b3 * p / Nbar[self.adultBins]
+        current = cl * (i + a + self.beta2*e) / self.Nbar
+        current += cl2 * (xi + xa + self.beta2*xe) / self.Nbar
+        current[self.adultBins] += cl[self.adultBins, :] * b3 * p / self.Nbar[self.adultBins]
         lambdaLockdown = module.sum(self.beta * current, axis=1)
 
         ds = -s * (lambdaNormal + self.k0(t)) + self.mu(t) * xs 
@@ -323,11 +323,11 @@ class SpaxireAgeStratified () :
     def addCrossTerms (self, dx, module=np) : 
         ds, de, da, di, dxs, dxe, dxa, dxi, dp, dr = dx.reshape((-1, self.bins))
 
-        ds  += (self.sIn  - self.sOut )
-        de  += (self.eIn  - self.eOut )
-        da  += (self.aIn  - self.aOut )
-        di  += (self.iIn  - self.iOut )
-        dr  += (self.rIn  - self.rOut )
+        ds  += (self.sIn  - self.sOut)
+        de  += (self.eIn  - self.eOut)
+        da  += (self.aIn  - self.aOut)
+        di  += (self.iIn  - self.iOut)
+        dr  += (self.rIn  - self.rOut)
 
         return cat[module]((ds, de, da, di, dxs, dxe, dxa, dxi, dp, dr))
 
@@ -340,6 +340,7 @@ def linearApprox (fn, x0, T) :
     x = x0
     for t in range(T) : 
         dx = fn(x, t)
+        print(x[0], dx[0])
         x = x + fn(x, t)
         out.append(x)
     return np.array(out)
@@ -348,7 +349,6 @@ if __name__ == "__main__" :
     with open('./Data/beta.json') as fd : 
         betas = json.load(fd)
     transportMatrix = np.loadtxt('./Data/transportMatrix.csv', delimiter=',')
-    transportMatrix = np.zeros(transportMatrix.shape)
     mortality = [getAgeMortality(s) for s in STATES]
     statePop  = [getStatePop(s) for s in STATES]
     model = IndiaModel(transportMatrix, betas, statePop, mortality) 
@@ -364,6 +364,6 @@ if __name__ == "__main__" :
         x0.extend(x)
     x0 = np.array(x0)
     results = linearApprox(model.dx, x0, 50)
-    results = results.T.reshape((len(STATES), 30, -1))
-    for r, s in zip(results, STATES) : 
-        statePlot(r.T, s, Date('29 Feb'), 3)
+    # results = results.T.reshape((len(STATES), 30, -1))
+    # for r, s in zip(results, STATES) : 
+    #     statePlot(r.T, s, Date('29 Feb'), 3)
