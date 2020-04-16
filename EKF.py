@@ -1,4 +1,5 @@
 import torch
+from tqdm import tqdm
 from torch.autograd import Variable
 from functools import partial
 from Util import *
@@ -47,7 +48,7 @@ def extendedKalmanFilter (updateStep, x0, P0, Q, H, R, Z, tStart, tEnd) :
     xs = [x0]
     Ps = [P0]
         
-    for i, date in enumerate(DateIter(tStart + 1, tEnd)) :
+    for i, date in tqdm(enumerate(DateIter(tStart + 1, tEnd))) :
         # Time update
         xtMinus = updateStep(xPrev, i+1)
         A, W = getProcessJacobians(partial(updateStep, t=i+1, module=torch), torch.from_numpy(xPrev))

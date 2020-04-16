@@ -141,107 +141,107 @@ if __name__ == "__main__" :
         seriesOfVariances.append(variances)
         Plot.statePlot(series, variances, state, ks.startDate, 3, datum)
 
-     x0 = np.hstack([series[-1] for series in seriesOfSeries])
-     P0 = np.zeros((1050, 1050))
-     for i in range(35):
-         P0[30*i:30*(i+1), 30*i: 30*(i+1)] = seriesOfVariances[i][-1]
+    x0 = np.hstack([series[-1] for series in seriesOfSeries])
+    P0 = np.zeros((1050, 1050))
+    for i in range(35):
+        P0[30*i:30*(i+1), 30*i: 30*(i+1)] = seriesOfVariances[i][-1]
  
-     Q = np.eye(1050)
-     H = lambda t : np.array([])
-     R = lambda t : np.array([])
-     Z = lambda t : np.array([])
-     tStart = Date('3 May')
-     tEnd = Date('30 Jun')
- 
-     newSeries, newVariances = extendedKalmanFilter(model.timeUpdate, x0, P0, Q, H, R, Z, tStart, tEnd)
- 
-     newVariances = [[v[30*i:30*(i+1), 30*i: 30*(i+1)] for i, _ in enumerate(Model.STATES)] for v in newVariances]
-     newVariances = [[row[i] for row in newVariances] for i in range(len(newVariances[0]))] 
- 
-     newSeries = newSeries.T.reshape((35, 30, -1))
-     for i, _ in enumerate(Model.STATES) : 
-         seriesOfSeries[i] = np.vstack((seriesOfSeries[i], newSeries[i].T))
-         seriesOfVariances[i].extend(newVariances[i])
- 
-     with open('series.pkl', 'wb') as fd : 
-         pickle.dump(seriesOfSeries, fd)
- 
-     with open('var.pkl', 'wb') as fd : 
-         pickle.dump(seriesOfVariances, fd)
- 
-     state_id = 1
-     for m, datum, series, variance ,state in zip(model.models, data, seriesOfSeries, seriesOfVariances, Model.STATES) : 
-         ks = KalmanSimulator(datum, m, x0)
-         Plot.statePlot(series, variance, state, ks.startDate, 3, datum)
- 
-         # outputting into the csv
-         # need to estimate daily values from the timeseries of all the compartments
- 
-         deads_daily = np.sum(getAgeMortality(state) * 0.01 * (series[:, 9:12] + series[:, 21:24] + series[:, 24:27]), axis = 1)
-         deads_daily = deads_daily[:-17]
-         deads_daily = np.concatenate([np.zeros(17), deads_daily])
-         deads_total = np.cumsum(deads_daily)
- 
-         recovered_total = np.sum(series[:, 27:30], axis = 1)
-         recovered_daily = np.insert(np.diff(recovered_total), 0 , recovered_total[0])
-         recovered_daily = recovered_daily - deads_daily
-         recovered_total = np.cumsum(recovered_daily)
- 
-         
-         # also has E + XE for now because they go into recovered too
-         infected_active = np.sum(series[:, 3:6] + series[:, 15:18] + series[:, 6:9] + series[:, 9:12] + series[:, 18:21] + series[:, 21:24] + series[:, 24:27], axis = 1)
-         
-         # if excluding E,Xe, can't compute infected_daily perfectly must settle with a 0.8 factor
-         # infected_active = np.sum(series[:, 6:9] + series[:, 9:12] + series[:, 18:21] + series[:, 21:24] + series[:, 24:27], axis = 1)
-         infected_daily = np.insert(np.diff(infected_active), 0 , infected_active[0])
-         infected_daily = infected_daily + recovered_daily + deads_daily
- 
-         #print(deads_daily.shape, recovered_total.shape, recovered_daily.shape, infected_daily.shape)
-         
- 
- 
-         #Can get some negative terms clipping them to zero
-         infected_daily = infected_daily.clip(min = 0)
-         deads_daily = deads_daily.clip(min = 0)
-         recovered_daily = recovered_daily.clip(min = 0)
- #        
- #        infected_active = infected_active.clip(min = 0)
- #        deads_total =  deads_total.clip(min = 0)
- #        recovered_total = recovered_total.clip(min = 0)
- #
- #        state_ids = np.ones(tEnd - ks.startDate, dtype = int) * int(state_id)
- #        df = pd.DataFrame(data = [state_ids, infected_daily, deads_daily, recovered_daily], index = ["State Id", "Number of infected (new)", "Number of Death (New)", "Number of Recovery (New)"])
- #        df = df.T
- #        
- #        df2 = pd.DataFrame(data = [state_ids, infected_active, deads_total, recovered_total], index = ["State id", "Simulated total infected", "Simulated total death", "Simulated total recovery"])
- #        df2 = df2.T
- #
- #
- #        datelist = [f'{date.day}/{date.month}/2020' for date in DateIter(ks.startDate, tEnd)]
- #        #print(len(datelist), len(infected_active))
- #        
- #        #print(len(datelist))
- #
- #        df['Date'] = datelist
- #
- #        df2['Date'] = datelist
- #
- #
- #        df = df[["State Id", "Date", "Number of infected (new)", "Number of Death (New)", "Number of Recovery (New)"]]
- #        df = df2[["State id", "Date", "Simulated total infected", "Simulated total death", "Simulated total recovery"]]
- #
- #        if state_id == 1:
- #            DF = df
- #            DF2 = df2
- #        else:
- #            DF = pd.concat([DF, df], ignore_index = True)
- #            DF2 = pd.concat([DF2, df2], ignore_index = True)
- #
- #
- #        #print(df)
- #        DF.to_csv('sheet2.csv', index = False) 
- #        DF2.to_csv('sheet3.csv', index = False) 
- #
- #
- #
- #        state_id = state_id + 1
+    Q = np.eye(1050)
+    H = lambda t : np.array([])
+    R = lambda t : np.array([])
+    Z = lambda t : np.array([])
+    tStart = Date('3 May')
+    tEnd = Date('30 Jun')
+
+    newSeries, newVariances = extendedKalmanFilter(model.timeUpdate, x0, P0, Q, H, R, Z, tStart, tEnd)
+
+    newVariances = [[v[30*i:30*(i+1), 30*i: 30*(i+1)] for i, _ in enumerate(Model.STATES)] for v in newVariances]
+    newVariances = [[row[i] for row in newVariances] for i in range(len(newVariances[0]))] 
+
+    newSeries = newSeries.T.reshape((35, 30, -1))
+    for i, _ in enumerate(Model.STATES) : 
+        seriesOfSeries[i] = np.vstack((seriesOfSeries[i], newSeries[i].T))
+        seriesOfVariances[i].extend(newVariances[i])
+
+    with open('series.pkl', 'wb') as fd : 
+        pickle.dump(seriesOfSeries, fd)
+
+    with open('var.pkl', 'wb') as fd : 
+        pickle.dump(seriesOfVariances, fd)
+
+    state_id = 1
+    for m, datum, series, variance ,state in zip(model.models, data, seriesOfSeries, seriesOfVariances, Model.STATES) : 
+        ks = KalmanSimulator(datum, m, x0)
+        Plot.statePlot(series, variance, state, ks.startDate, 3, datum)
+
+        # outputting into the csv
+        # need to estimate daily values from the timeseries of all the compartments
+
+        deads_daily = np.sum(getAgeMortality(state) * 0.01 * (series[:, 9:12] + series[:, 21:24] + series[:, 24:27]), axis = 1)
+        deads_daily = deads_daily[:-17]
+        deads_daily = np.concatenate([np.zeros(17), deads_daily])
+        deads_total = np.cumsum(deads_daily)
+
+        recovered_total = np.sum(series[:, 27:30], axis = 1)
+        recovered_daily = np.insert(np.diff(recovered_total), 0 , recovered_total[0])
+        recovered_daily = recovered_daily - deads_daily
+        recovered_total = np.cumsum(recovered_daily)
+
+        
+        # also has E + XE for now because they go into recovered too
+        infected_active = np.sum(series[:, 3:6] + series[:, 15:18] + series[:, 6:9] + series[:, 9:12] + series[:, 18:21] + series[:, 21:24] + series[:, 24:27], axis = 1)
+        
+        # if excluding E,Xe, can't compute infected_daily perfectly must settle with a 0.8 factor
+        # infected_active = np.sum(series[:, 6:9] + series[:, 9:12] + series[:, 18:21] + series[:, 21:24] + series[:, 24:27], axis = 1)
+        infected_daily = np.insert(np.diff(infected_active), 0 , infected_active[0])
+        infected_daily = infected_daily + recovered_daily + deads_daily
+
+        #print(deads_daily.shape, recovered_total.shape, recovered_daily.shape, infected_daily.shape)
+        
+
+
+        #Can get some negative terms clipping them to zero
+        infected_daily = infected_daily.clip(min = 0)
+        deads_daily = deads_daily.clip(min = 0)
+        recovered_daily = recovered_daily.clip(min = 0)
+       
+        infected_active = infected_active.clip(min = 0)
+        deads_total =  deads_total.clip(min = 0)
+        recovered_total = recovered_total.clip(min = 0)
+
+        state_ids = np.ones(tEnd - ks.startDate, dtype = int) * int(state_id)
+        df = pd.DataFrame(data = [state_ids, infected_daily, deads_daily, recovered_daily], index = ["State Id", "Number of infected (new)", "Number of Death (New)", "Number of Recovery (New)"])
+        df = df.T
+        
+        df2 = pd.DataFrame(data = [state_ids, infected_active, deads_total, recovered_total], index = ["State id", "Simulated total infected", "Simulated total death", "Simulated total recovery"])
+        df2 = df2.T
+
+
+        datelist = [f'{date.day}/{date.month}/2020' for date in DateIter(ks.startDate, tEnd)]
+        #print(len(datelist), len(infected_active))
+        
+        #print(len(datelist))
+
+        df['Date'] = datelist
+
+        df2['Date'] = datelist
+
+
+        df = df[["State Id", "Date", "Number of infected (new)", "Number of Death (New)", "Number of Recovery (New)"]]
+        df = df2[["State id", "Date", "Simulated total infected", "Simulated total death", "Simulated total recovery"]]
+
+        if state_id == 1:
+            DF = df
+            DF2 = df2
+        else:
+            DF = pd.concat([DF, df], ignore_index = True)
+            DF2 = pd.concat([DF2, df2], ignore_index = True)
+
+
+        #print(df)
+        DF.to_csv('sheet2.csv', index = False) 
+        DF2.to_csv('sheet3.csv', index = False) 
+
+
+
+        state_id = state_id + 1
