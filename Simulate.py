@@ -47,10 +47,10 @@ class KalmanSimulator () :
         self.setQ()
 
     def setP0(self) : 
-        self.P0 = np.diag([1e2] * 12 + [1] * 18)
+        self.P0 = np.diag([1] * 12 + [1] * 18)
 
     def setQ (self) :
-        self.Q = np.diag([1e1] * 24 + [1] * 6)
+        self.Q = np.diag([1] * 24 + [1] * 6)
     
     def splitDates (self, date) : 
         d, m, _ = date.split('-')
@@ -97,16 +97,16 @@ class KalmanSimulator () :
     def R (self, date): 
         if self.peopleDied : 
             if date < self.firstCases : 
-                return np.array([1])
+                return np.array([5])
             elif self.firstCases <= date <= self.dataEndDate - 17 :
                 return np.eye(2)
             elif self.dataEndDate - 17 < date <= self.dataEndDate : 
-                return np.array([1])
+                return np.array([5])
             else :
                 return np.array([])
         else : 
             if date <= self.dataEndDate : 
-                return np.array([1])
+                return np.array([5])
             else : 
                 return np.array([])
 
