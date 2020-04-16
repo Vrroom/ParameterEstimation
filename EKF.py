@@ -71,9 +71,9 @@ def extendedKalmanFilter (updateStep, x0, P0, Q, H, R, Z, tStart, tEnd) :
             Pt = PMinus
         
         xs.append(xt)
-        Ps.append(np.diag(Pt))
+        Ps.append(Pt)
     
-    return np.stack(xs), np.stack(Ps)
+    return np.stack(xs), Ps
 
 if __name__ == "__main__" : 
     print(getJacobian(sin, torch.tensor([0., 1.])))
