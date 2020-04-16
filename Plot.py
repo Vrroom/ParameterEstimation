@@ -12,7 +12,7 @@ def gather(T, series, variances, indices):
     outputVariances = [np.sqrt(x) for x in outputVariances]
     return np.array(outputSeries), np.array(outputVariances)
 
-def statePlot (series, variances, state, beginDate, step) : 
+def statePlot (series, variances, state, beginDate, step, groundTruth) : 
     T = len(series)
     compartments = {k: [3*i, 3*i + 1, 3*i + 2] for i, k in enumerate(['S', 'E', 'A', 'I', 'Xs', 'Xe', 'Xa', 'Xi', 'P', 'R'])}
     '''
@@ -42,7 +42,7 @@ def statePlot (series, variances, state, beginDate, step) :
     p, p_std = gather(T, series, variances, compartments['P'])
     symptomatics, symptomatics_std = gather(T, series, variances, compartments['P'] + compartments['I'] + compartments['Xi'] + compartments['A'] + compartments['Xa'])
     fig, ax1 = plt.subplots(nrows=1, ncols=1, sharex=True, figsize=(20, 10))
-    fig.suptitle(state, fontsize=20)
+    fig.suptitle(state, fontsize=25)
     tickLabels = list(DateIter(beginDate, beginDate + T))[::step]
     tickLabels = [d.date for d in tickLabels]
     days = np.array([np.arange(T) for _ in range(3)])
@@ -52,14 +52,18 @@ def statePlot (series, variances, state, beginDate, step) :
     
     ax1.plot(np.arange(T), symptomatics, color = colors[1], label = "Infected")
     ax1.fill_between(np.arange(T), np.maximum(symptomatics - symptomatics_std, 0), symptomatics + symptomatics_std, facecolor = colors[1], alpha=0.2)
+
+    groundTruthPositive = (groundTruth['Total Cases'] - groundTruth['Total Recovered'] - groundTruth['Total Dead']).to_numpy()
+    ax1.scatter(np.arange(len(groundTruthPositive)), groundTruthPositive, c= colors[2], label = "Reported Positive")
     
-    ax1.legend()
-    ax1.set_xlabel('Time / days', fontsize=17)
-    ax1.set_ylabel('Number of people', fontsize=17)
+    ax1.legend(fontsize = 20)
+    ax1.set_xlabel('Time / days', fontsize=25)
+    ax1.set_ylabel('Number of people', fontsize=25)
     # ax1.set_yscale('log')
     ax1.xaxis.set_major_locator(ticker.MultipleLocator(step))
     ax1.set_xticklabels(tickLabels, rotation = 'vertical')
-    ax1.tick_params(axis='both', which='major', labelsize=14)
+    ax1.tick_params(axis='both', which='major', labelsize=20)
+    fig.tight_layout()
     fig.savefig('./Plots/' + state)
     plt.close(fig)
     
