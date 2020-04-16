@@ -1,4 +1,5 @@
 import torch
+from torch.autograd import Variable
 from functools import partial
 from Util import *
 from Model import *
@@ -68,8 +69,6 @@ def extendedKalmanFilter (updateStep, x0, P0, Q, H, R, Z, tStart, tEnd) :
         else : 
             xPrev = xtMinus
             PPrev = PMinus
-
-            xt[xt < 0] = np.maximum(xt[xt < 0], np.maximum(0, xPrev[xt < 0])) # Shameless Hack
 
             xt = xtMinus
             Pt = PMinus

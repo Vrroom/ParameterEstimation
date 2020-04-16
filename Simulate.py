@@ -126,6 +126,8 @@ if __name__ == "__main__" :
     mortality = [0.01 * getAgeMortality(s) for s in Model.STATES]
     data = [getData(s) for s in Model.STATES]
     model = Model.IndiaModel(transportMatrix, betas, statePop, mortality, data) 
+    seriesOfSeries = []
+    seriesOfVariances = []
     for datum, m, nbar,state in zip(data, model.models, statePop, Model.STATES) : 
         E0 = [0, 10, 0]
         A0 = [0, 10, 0]
@@ -133,5 +135,35 @@ if __name__ == "__main__" :
         nbar[1] -= 30
         x0 = np.array([*(nbar.tolist()), *E0, *A0, *I0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0])
         ks = KalmanSimulator(datum, m, x0)
-        series, variances = ks(Date('30 Jun') - ks.startDate)
-        Plot.statePlot(series, variances, state, ks.startDate, 7, datum)
+        series, variances = ks(Date('3 May') - ks.startDate)
+        seriesOfSeries.append(series)
+        seriesOfVariances.append(variances)
+
+    x0 = []
+    for series in seriesOfSeries : 
+        x0.append(series[-1])
+
+    x0 = np.hstack(x0)
+    P0 = np.eye(1050)
+    Q = np.eye(1050)
+    H = lambda t : np.array([])
+    R = lambda t : np.array([])
+    Z = lambda t : np.array([])
+    tStart = Date('3 May')
+    tEnd = Date('30 Jun')
+
+    newSeries, newVariances = extendedKalmanFilter(model.timeUpdate, x0, P0, Q, H, R, Z, tStart, tEnd)
+
+    newVariances = [[v[30*i:30*(i+1)] for i, _ in enumerate(Model.STATES)] for v in newVariances]
+    newVariances = [[row[i] for row in newVariances] for i in range(len(newVariances[0]))] 
+
+    newSeries = newSeries.T.reshape((35, 30, -1))
+    for i, _ in enumerate(Model.STATES) : 
+        seriesOfSeries[i] = np.vstack((seriesOfSeries[i], newSeries[i].T))
+        seriesOfVariances[i].extend(newVariances[i])
+
+    for m, datum, series, variance ,state in zip(model.models, data, seriesOfSeries, seriesOfVariances, Model.STATES) : 
+        statePlot(series, variance, state, m.startDate, 3, datum)
+
+    
+

@@ -46,7 +46,6 @@ class IndiaModel () :
     def dx (self, x, t, module=np) : 
         xs = x.reshape((self.states, -1))
         derivatives = [m.dx(x, t, module) for x, m in zip(xs, self.models)]
-        
         for m in self.models : 
             m.send()
 
@@ -54,9 +53,9 @@ class IndiaModel () :
             _, outChannel = self.links[i]
             data = outChannel.pop()
             for j in range(self.states) :
-                data_ = deepcopy(data)
-                for key in data.keys() : 
-                    data_[key] *= self.transportMatrix[j, i]
+                data_ = dict()
+                for key, val in data.items() : 
+                    data_[key] = val * self.transportMatrix[j, i]
                 inChannel, _ = self.links[j]
                 inChannel.append(data_)
 
@@ -66,6 +65,10 @@ class IndiaModel () :
         derivatives = [m.addCrossTerms(dx, module) for dx in derivatives]
         dx = cat[module](derivatives)
         return dx
+
+    def timeUpdate (self, x, t, module=np) : 
+        dx = self.dx(x, t, module)
+        return x + dx
 
     def setStateModels (self):
         self.models = []
