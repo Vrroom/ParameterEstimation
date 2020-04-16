@@ -45,6 +45,7 @@ def statePlot (series, variances, state, beginDate, step, groundTruth) :
     fig.suptitle(state, fontsize=25)
     tickLabels = list(DateIter(beginDate, beginDate + T + 30))[::step]
     tickLabels = [d.date for d in tickLabels]
+    tickLabels = ['', *tickLabels]
     
     ax1.plot(np.arange(T), p, color = colors[0], label = "Tested Positive")
     ax1.fill_between(np.arange(T), np.maximum(p - p_std, 0), p + p_std, facecolor = colors[0], alpha=0.2)
@@ -69,7 +70,6 @@ def statePlot (series, variances, state, beginDate, step, groundTruth) :
     left, bottom, width, height = [0.17, 0.37, 0.35, 0.35]
     ax2 = fig.add_axes([left, bottom, width, height])
     T2 = Date('15 Apr') - beginDate
-    print(state, beginDate.date)
     
     p = p[:T2]
     p_std = p_std[:T2]
@@ -82,7 +82,9 @@ def statePlot (series, variances, state, beginDate, step, groundTruth) :
     ax2.fill_between(np.arange(T2), np.maximum(symptomatics - symptomatics_std, 0), symptomatics + symptomatics_std, facecolor = colors[1], alpha=0.2)
 
     groundTruthPositive = (groundTruth['Total Cases'] - groundTruth['Total Recovered'] - groundTruth['Total Dead']).to_numpy()
-    ax2.scatter(np.arange(len(groundTruthPositive)), groundTruthPositive, c= colors[2], label = "Reported Positive")
+    dataDate = groundTruth['Date'].iloc[0].split('-')
+    dataDate = Date(f'{dataDate[0]} {dataDate[1]}')
+    ax2.scatter(np.arange(dataDate - beginDate, dataDate - beginDate + len(groundTruthPositive)), groundTruthPositive, c= colors[2], label = "Reported Positive")
     
     # ax2.legend(fontsize = 20)
     # ax2.set_xlabel('Time / days', fontsize=25)
@@ -90,7 +92,8 @@ def statePlot (series, variances, state, beginDate, step, groundTruth) :
     # ax1.set_yscale('log')
     tickLabels = list(DateIter(beginDate, beginDate + T + 30))[::7]
     tickLabels = [d.date for d in tickLabels]
-    ax2.xaxis.set_major_locator(ticker.MultipleLocator(step))
+    tickLabels = ['', *tickLabels]
+    ax2.xaxis.set_major_locator(ticker.MultipleLocator(7))
     ax2.set_xticklabels(tickLabels, rotation = 'vertical')
     ax2.tick_params(axis='both', which='major', labelsize=18)
 
