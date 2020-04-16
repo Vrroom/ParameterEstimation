@@ -1,4 +1,5 @@
 from Util import *
+import pickle
 import Plot
 from EKF import *
 import json
@@ -150,7 +151,7 @@ if __name__ == "__main__" :
     R = lambda t : np.array([])
     Z = lambda t : np.array([])
     tStart = Date('3 May')
-    tEnd = Date('30 Jun')
+    tEnd = Date('5 May')
 
     newSeries, newVariances = extendedKalmanFilter(model.timeUpdate, x0, P0, Q, H, R, Z, tStart, tEnd)
 
@@ -161,6 +162,12 @@ if __name__ == "__main__" :
     for i, _ in enumerate(Model.STATES) : 
         seriesOfSeries[i] = np.vstack((seriesOfSeries[i], newSeries[i].T))
         seriesOfVariances[i].extend(newVariances[i])
+
+    with open('series.pkl', 'wb') as fd : 
+        pickle.dump(seriesOfSeries, fd)
+
+    with open('var.pkl', 'wb') as fd : 
+        pickle.dump(seriesOfVariances, fd)
 
     for m, datum, series, variance ,state in zip(model.models, data, seriesOfSeries, seriesOfVariances, Model.STATES) : 
         statePlot(series, variance, state, m.startDate, 3, datum)
