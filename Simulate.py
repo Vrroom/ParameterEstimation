@@ -50,7 +50,7 @@ class KalmanSimulator () :
         self.P0 = np.diag([1e2] * 12 + [1] * 18)
 
     def setQ (self) :
-        self.Q = np.diag([1e2] * 24 + [10] * 6)
+        self.Q = np.diag([1e1] * 24 + [1] * 6)
     
     def splitDates (self, date) : 
         d, m, _ = date.split('-')
@@ -116,7 +116,6 @@ class KalmanSimulator () :
                 self.model.timeUpdate, self.x0, self.P0, 
                 self.Q, self.H, self.R, self.Z, 
                 self.startDate, endDate)
-        print(variances[0].shape)
         return series, variances
 
 if __name__ == "__main__" : 
@@ -125,8 +124,8 @@ if __name__ == "__main__" :
     transportMatrix = np.loadtxt('./Data/transportMatrix.csv', delimiter=',')
     statePop  = [getStatePop(s) for s in Model.STATES]
     mortality = [0.01 * getAgeMortality(s) for s in Model.STATES]
-    model = Model.IndiaModel(transportMatrix, betas, statePop, mortality) 
     data = [getData(s) for s in Model.STATES]
+    model = Model.IndiaModel(transportMatrix, betas, statePop, mortality, data) 
     for datum, m, nbar,state in zip(data, model.models, statePop, Model.STATES) : 
         E0 = [0, 10, 0]
         A0 = [0, 10, 0]
@@ -134,5 +133,5 @@ if __name__ == "__main__" :
         nbar[1] -= 30
         x0 = np.array([*(nbar.tolist()), *E0, *A0, *I0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0])
         ks = KalmanSimulator(datum, m, x0)
-        series, variances = ks(50)
+        series, variances = ks(Date('3 May') - ks.startDate)
         Plot.statePlot(series, variances, state, ks.startDate, 3, datum)
