@@ -116,6 +116,7 @@ class KalmanSimulator () :
                 self.model.timeUpdate, self.x0, self.P0, 
                 self.Q, self.H, self.R, self.Z, 
                 self.startDate, endDate)
+        print(variances[0].shape)
         return series, variances
 
 if __name__ == "__main__" : 

@@ -7,12 +7,15 @@ from Simulate import *
 from more_itertools import collapse
 
 def gather(T, series, variances, indices):
-    output = np.zeros(())
+    outputSeries = [sum(x[index] for index in indices) for x in series]
+    outputVariances = [x[indices, :][:, indices].sum() for x in variances]
+    outputVariances = [np.sqrt(x) for x in outputVariances]
+    return np.array(outputSeries), np.array(outputVariances)
 
 def statePlot (series, variances, state, beginDate, step) : 
-    print(variances[0].shape)
-    T, _ = series.shape
-    compartments = ['S', 'E', 'A', 'I', 'Xs', 'Xe', 'Xa', 'Xi', 'P', 'R']
+    T = len(series)
+    compartments = {k: [3*i, 3*i + 1, 3*i + 2] for i, k in enumerate(['S', 'E', 'A', 'I', 'Xs', 'Xe', 'Xa', 'Xi', 'P', 'R'])}
+    '''
     bins = ['0-20', '20-60', '60+']
     series = series.T.reshape((10, -1, T))
     std = np.sqrt(variances.T.reshape((10, -1, T)))
@@ -34,3 +37,29 @@ def statePlot (series, variances, state, beginDate, step) :
         a.set_xticklabels(tickLabels, rotation = 'vertical')
     fig.savefig('./Plots/' + state)
     plt.close(fig)
+    '''
+    colors = ['b', 'g', 'r']
+    p, p_std = gather(T, series, variances, compartments['P'])
+    symptomatics, symptomatics_std = gather(T, series, variances, compartments['P'] + compartments['I'] + compartments['Xi'] + compartments['A'] + compartments['Xa'])
+    fig, ax1 = plt.subplots(nrows=1, ncols=1, sharex=True, figsize=(20, 10))
+    fig.suptitle(state, fontsize=20)
+    tickLabels = list(DateIter(beginDate, beginDate + T))[::step]
+    tickLabels = [d.date for d in tickLabels]
+    days = np.array([np.arange(T) for _ in range(3)])
+    
+    ax1.plot(np.arange(T), p, color = colors[0], label = "Tested Positive")
+    ax1.fill_between(np.arange(T), np.maximum(p - p_std, 0), p + p_std, facecolor = colors[0], alpha=0.2)
+    
+    ax1.plot(np.arange(T), symptomatics, color = colors[1], label = "Infected")
+    ax1.fill_between(np.arange(T), np.maximum(symptomatics - symptomatics_std, 0), symptomatics + symptomatics_std, facecolor = colors[1], alpha=0.2)
+    
+    ax1.legend()
+    ax1.set_xlabel('Time / days', fontsize=17)
+    ax1.set_ylabel('Number of people', fontsize=17)
+    # ax1.set_yscale('log')
+    ax1.xaxis.set_major_locator(ticker.MultipleLocator(step))
+    ax1.set_xticklabels(tickLabels, rotation = 'vertical')
+    ax1.tick_params(axis='both', which='major', labelsize=14)
+    fig.savefig('./Plots/' + state)
+    plt.close(fig)
+    
