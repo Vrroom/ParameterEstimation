@@ -142,11 +142,11 @@ if __name__ == "__main__" :
         Plot.statePlot(series, variances, state, ks.startDate, 3, datum)
 
     x0 = np.hstack([series[-1] for series in seriesOfSeries])
-    P0 = np.zeros((1050, 1050))
+    P0 = np.zeros((1110, 1110))
     for i in range(35):
         P0[30*i:30*(i+1), 30*i: 30*(i+1)] = seriesOfVariances[i][-1]
  
-    Q = 0.1 * np.eye(1050)
+    Q = 0.1 * np.eye(1110)
     H = lambda t : np.array([])
     R = lambda t : np.array([])
     Z = lambda t : np.array([])
