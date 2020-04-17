@@ -146,7 +146,7 @@ if __name__ == "__main__" :
     for i in range(35):
         P0[30*i:30*(i+1), 30*i: 30*(i+1)] = seriesOfVariances[i][-1]
  
-    Q = np.eye(1050)
+    Q = 0.1 * np.eye(1050)
     H = lambda t : np.array([])
     R = lambda t : np.array([])
     Z = lambda t : np.array([])
