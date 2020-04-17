@@ -84,7 +84,10 @@ def statePlot (series, variances, state, beginDate, step, groundTruth) :
     groundTruthPositive = (groundTruth['Total Cases'] - groundTruth['Total Recovered'] - groundTruth['Total Dead']).to_numpy()
     dataDate = groundTruth['Date'].iloc[0].split('-')
     dataDate = Date(f'{dataDate[0]} {dataDate[1]}')
-    ax2.scatter(np.arange(dataDate - beginDate, dataDate - beginDate + len(groundTruthPositive)), groundTruthPositive, c= colors[2], label = "Reported Positive")
+    if (dataDate - beginDate) >= 0:
+        ax2.scatter(np.arange(dataDate - beginDate, dataDate - beginDate + len(groundTruthPositive)), groundTruthPositive, c= colors[2], label = "Reported Positive")
+    else:
+        ax2.scatter(np.arange(len(groundTruthPositive[beginDate - dataDate:])), groundTruthPositive[beginDate - dataDate:], c= colors[2], label = "Reported Positive")
     
     # ax2.legend(fontsize = 20)
     # ax2.set_xlabel('Time / days', fontsize=25)
