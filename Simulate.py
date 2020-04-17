@@ -228,7 +228,7 @@ if __name__ == "__main__" :
 
 
         df = df[["State Id", "Date", "Number of infected (new)", "Number of Death (New)", "Number of Recovery (New)"]]
-        df = df2[["State id", "Date", "Simulated total infected", "Simulated total death", "Simulated total recovery"]]
+        df2 = df2[["State id", "Date", "Simulated total infected", "Simulated total death", "Simulated total recovery"]]
 
         if state_id == 1:
             DF = df
@@ -238,7 +238,6 @@ if __name__ == "__main__" :
             DF2 = pd.concat([DF2, df2], ignore_index = True)
 
 
-        #print(df)
         DF.to_csv('sheet2.csv', index = False) 
         DF2.to_csv('sheet3.csv', index = False) 
 

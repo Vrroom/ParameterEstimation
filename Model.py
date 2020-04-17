@@ -1,3 +1,4 @@
+# 1b
 from Util import *
 import json
 import random
@@ -87,21 +88,19 @@ class IndiaModel () :
             else : 
                 startDate = firstCases
 
-            changeKt = Date('27 Mar') - startDate
-
             lockdownBegin = Date('24 Mar') - startDate
-            lockdownEnd = Date('3 May') - startDate
+            lockdownEnd = Date('14 Apr') - startDate
 
             contactHome = np.loadtxt('./Data/home.csv', delimiter=',')
             contactTotal = np.loadtxt('./Data/total.csv', delimiter=',')
 
-            changeContactStart = math.inf
-            changeContactEnd   = math.inf
+            changeContactStart = Date('14 Apr') - startDate
+            changeContactEnd   = Date('15 May') - startDate
 
             changeKt = math.inf
             deltaKt  = math.inf
 
-            beta, lockdownLeakiness = self.betas[state]
+            beta, lockdownLeakiness, tf1, tf2, tf3  = self.betas[state]
 
             params = {
                 'tl'                : lockdownBegin, 
@@ -122,9 +121,9 @@ class IndiaModel () :
                 'contactTotal'      : partial(bumpFn, ti=changeContactStart, tf=changeContactEnd, x1=contactTotal, x2=0.5*contactTotal),
                 'bins'              : 3,
                 'adultBins'         : [1],
-                'testingFraction1'  : partial(climbFn, ti=changeKt, tf=changeKt+deltaKt, xi=1/13, xf=0.8),
-                'testingFraction2'  : partial(climbFn, ti=changeKt, tf=changeKt+deltaKt, xi=0, xf=0.5),
-                'testingFraction3'  : partial(climbFn, ti=changeKt, tf=changeKt+deltaKt, xi=0, xf=0.5),
+                'testingFraction1'  : partial(climbFn, ti=changeKt, tf=changeKt+deltaKt, xi=tf1, xf=0.8),
+                'testingFraction2'  : partial(climbFn, ti=changeKt, tf=changeKt+deltaKt, xi=tf2, xf=0.5),
+                'testingFraction3'  : partial(climbFn, ti=changeKt, tf=changeKt+deltaKt, xi=tf2, xf=0.5),
                 'totalOut'          : self.transportMatrix[:, idx].sum(),
                 'Nbar'              : self.statePop[idx],
                 'mortality'         : self.mortality[idx]
