@@ -96,7 +96,7 @@ class IndiaModel () :
             contactHome = np.loadtxt('./Data/home.csv', delimiter=',')
             contactTotal = np.loadtxt('./Data/total.csv', delimiter=',')
 
-            changeContactStart = Date('14 Apr') - startDate
+            changeContactStart = self.lockdownEnd - startDate
             changeContactEnd   = Date('15 May') - startDate
 
             changeKt = math.inf
