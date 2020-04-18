@@ -25,6 +25,9 @@ class DateIter () :
         else : 
             raise StopIteration()
 
+    def __len__ (self) : 
+        return self.end - self.start
+
 class Date () : 
 
     MONTHS = ['Jan', 'Feb', 'Mar', 

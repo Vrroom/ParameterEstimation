@@ -75,7 +75,7 @@ class IndiaModel () :
     def setStateModels (self):
         self.models = []
         self.links = []
-        self.lockdownEnd = Date('3 May')
+        self.lockdownEnd = Date('1 Jun')
         for idx, state in enumerate(STATES) : 
             datum = self.data[idx]
 
