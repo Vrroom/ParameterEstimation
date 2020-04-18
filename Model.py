@@ -75,7 +75,7 @@ class IndiaModel () :
     def setStateModels (self):
         self.models = []
         self.links = []
-        self.lockdownEnd = Date('14 Apr')
+        self.lockdownEnd = Date('3 May')
         for idx, state in enumerate(STATES) : 
             datum = self.data[idx]
 
@@ -90,17 +90,17 @@ class IndiaModel () :
             else : 
                 startDate = firstCases
 
-            lockdownBegin = Date('24 Mar') - startDate
-            lockdownEnd = self.lockdownEnd - startDate
+            lockdownBegin = Date('24 Mar')
+            lockdownEnd = self.lockdownEnd
 
             contactHome = np.loadtxt('./Data/home.csv', delimiter=',')
             contactTotal = np.loadtxt('./Data/total.csv', delimiter=',')
 
-            changeContactStart = self.lockdownEnd - startDate
-            changeContactEnd   = Date('15 May') - startDate
+            changeContactStart = self.lockdownEnd
+            changeContactEnd   = Date('15 May')
 
-            changeKt = math.inf
-            deltaKt  = math.inf
+            changeKt = Date('10 Nov')
+            deltaKt  = 10
 
             beta, lockdownLeakiness, tf1, tf2, tf3  = self.betas[state]
 
