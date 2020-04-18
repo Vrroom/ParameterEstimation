@@ -136,7 +136,7 @@ if __name__ == "__main__" :
         nbar[1] -= 30
         x0 = np.array([*(nbar.tolist()), *E0, *A0, *I0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0])
         ks = KalmanSimulator(datum, m, x0)
-        series, variances = ks(Date('3 May') - ks.startDate)
+        series, variances = ks(model.lockdownEnd - ks.startDate)
         seriesOfSeries.append(series)
         seriesOfVariances.append(variances)
         Plot.statePlot(series, variances, state, ks.startDate, 3, datum)
