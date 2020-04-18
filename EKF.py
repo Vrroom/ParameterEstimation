@@ -14,9 +14,9 @@ def getProcessJacobians(f, x):
     x.requires_grad = True
     aGrads = []
     wGrads = []
+    out = f(x + w)
     for i, _ in enumerate(x) : 
-        out = f(x + w)
-        out[i].backward()
+        out[i].backward(retain_graph=True)
         aGrads.append(x.grad.data.clone())
         wGrads.append(w.grad.data.clone())
         x.grad.data.zero_()
