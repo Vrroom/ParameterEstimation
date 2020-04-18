@@ -75,6 +75,7 @@ class IndiaModel () :
     def setStateModels (self):
         self.models = []
         self.links = []
+        self.lockdownEnd = Date('3 May')
         for idx, state in enumerate(STATES) : 
             datum = self.data[idx]
 
@@ -90,7 +91,7 @@ class IndiaModel () :
                 startDate = firstCases
 
             lockdownBegin = Date('24 Mar') - startDate
-            lockdownEnd = Date('14 Apr') - startDate
+            lockdownEnd = self.lockdownEnd - startDate
 
             contactHome = np.loadtxt('./Data/home.csv', delimiter=',')
             contactTotal = np.loadtxt('./Data/total.csv', delimiter=',')

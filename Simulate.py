@@ -143,22 +143,22 @@ if __name__ == "__main__" :
 
     x0 = np.hstack([series[-1] for series in seriesOfSeries])
     P0 = np.zeros((1110, 1110))
-    for i in range(35):
+    for i in range(37):
         P0[30*i:30*(i+1), 30*i: 30*(i+1)] = seriesOfVariances[i][-1]
  
     Q = 0.1 * np.eye(1110)
     H = lambda t : np.array([])
     R = lambda t : np.array([])
     Z = lambda t : np.array([])
-    tStart = Date('3 May')
-    tEnd = Date('30 Jun')
+    tStart = ks.lockdownEnd
+    tEnd = Date('1 Jun')
 
     newSeries, newVariances = extendedKalmanFilter(model.timeUpdate, x0, P0, Q, H, R, Z, tStart, tEnd)
 
     newVariances = [[v[30*i:30*(i+1), 30*i: 30*(i+1)] for i, _ in enumerate(Model.STATES)] for v in newVariances]
     newVariances = [[row[i] for row in newVariances] for i in range(len(newVariances[0]))] 
 
-    newSeries = newSeries.T.reshape((35, 30, -1))
+    newSeries = newSeries.T.reshape((37, 30, -1))
     for i, _ in enumerate(Model.STATES) : 
         seriesOfSeries[i] = np.vstack((seriesOfSeries[i], newSeries[i].T))
         seriesOfVariances[i].extend(newVariances[i])
