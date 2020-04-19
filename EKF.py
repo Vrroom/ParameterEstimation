@@ -4,26 +4,27 @@ from torch.autograd import Variable
 from functools import partial
 from Util import *
 from Model import *
+from Simulate import *
 import numpy as np
 import matplotlib.pyplot as plt
+import scipy.linalg
+import scipy.integrate
+import pdb
+import numdifftools as nd
 
 def getProcessJacobians(f, x):
-    w = torch.zeros(x.shape)
+    n = np.size(x)
+    eta = 1e-2
+    for i in range(0,n):
+        dx = np.zeros(n)
+        dx[i] = eta
+        df = (f(x + dx) - f(x))/eta
 
-    w.requires_grad = True
-    x.requires_grad = True
-    aGrads = []
-    wGrads = []
-    out = f(x + w)
-    for i, _ in enumerate(x) : 
-        out[i].backward(retain_graph=True)
-        aGrads.append(x.grad.data.clone())
-        wGrads.append(w.grad.data.clone())
-        x.grad.data.zero_()
-        w.grad.data.zero_()
-    A = torch.stack(aGrads).numpy()
-    W = torch.stack(wGrads).numpy()
-    return A, W
+        if i == 0:
+            jac = df
+        else:
+            jac = np.vstack((jac,df))
+    return jac.T
 
 def sin(x) :
     if torch.is_tensor(x) : 
@@ -47,17 +48,24 @@ def extendedKalmanFilter (updateStep, x0, P0, Q, H, R, Z, tStart, tEnd) :
     PPrev = P0
     xs = [x0]
     Ps = [P0]
+    #print(tEnd.date)
         
-    for date in tqdm(DateIter(tStart + 1, tEnd)) :
+    for date in tqdm(DateIter(tStart, tEnd)) :
         # Time update
-        xtMinus = updateStep(xPrev, date)
-        A, W = getProcessJacobians(partial(updateStep, t=date, module=torch), torch.from_numpy(xPrev))
-        PMinus = A @ PPrev @ A.T + W @ Q @ W.T
+        i = date - tStart
+        #pdb.set_trace()
+        xtMinus = scipy.integrate.odeint(updateStep,xPrev,[i,i+1],args=(tStart,))
+        #pdb.set_trace()
+        xtMinus = xtMinus[1]
+        A = getProcessJacobians(partial(updateStep, delta_t=i, startDate=tStart), xPrev)
+        #A = nd.Jacobian(partial(updateStep, delta_t=i, startDate=tStart))(xPrev)
+        phi = scipy.linalg.expm(A)
+        PMinus = phi @ PPrev @ phi.T + Q
 
         # Measurement update
-        h = H(date)
-        r = R(date)
-        z = Z(date)
+        h = H(date+1)
+        r = R(date+1)
+        z = Z(date+1)
         if h.size > 0 : 
             K = PMinus @ h.T @ np.linalg.inv(h @ PMinus @ h.T + r)
             xt = xtMinus + K @ (z - h @ xtMinus)
@@ -76,6 +84,8 @@ def extendedKalmanFilter (updateStep, x0, P0, Q, H, R, Z, tStart, tEnd) :
         
         xs.append(xt)
         Ps.append(Pt)
+
+        print(date.date)
 
     return np.stack(xs), Ps
 

@@ -1,4 +1,4 @@
-# 2a
+# 1b
 from Util import *
 import json
 import random
@@ -12,21 +12,22 @@ import numpy as np
 from Simulate import *
 from copy import deepcopy
 from Plot import * 
+import pdb
 
 cat = {np : np.hstack, torch : torch.cat}
 
-STATES = ["Ahmadnagar","Akola","Amravati",
-        "Aurangabad","Bhandara","Bid",
-        "Buldana","Chandrapur","Dhule",
-        "Garhchiroli","Gondiya","Hingoli",
-        "Jalgaon","Jalna","Kolhapur","Latur",
-        "MumbaiCity","MumbaiSuburban","Nagpur",
-        "Nanded","Nandurbar","Nashik",
-        "Osmanabad","Palghar","Parbhani" ,
-        "Pune","Raigarh","Ratnagiri",
-        "Sangli","Satara","Sindhudurg",
-        "Solapur","Thane","Wardha",
-        "Washim","Yavatmal"]
+STATES = ['ANDAMAN&NICOBAR','ANDHRAPRADESH','ARUNACHALPRADESH',
+        'ASSAM','BIHAR','CHANDIGARH',
+        'CHHATTISGARH','DADRA&NAGARHAVELI','DAMAN&DIU',
+        'GOA','GUJARAT','HARYANA',
+        'HIMACHALPRADESH','JAMMU&KASHMIR','JHARKHAND',
+        'KARNATAKA','KERALA','LADAK',
+        'LAKSHADWEEP','MADHYAPRADESH','MAHARASHTRA',
+        'MANIPUR','MEGHALAYA','MIZORAM',
+        'NCTOFDELHI','NAGALAND','ODISHA',
+        'PUDUCHERRY','PUNJAB','RAJASTHAN',
+        'SIKKIM','TAMILNADU','TELANGANA',
+        'TRIPURA','UTTARPRADESH','UTTARAKHAND','WESTBENGAL']
 
 class IndiaModel () : 
 
@@ -45,9 +46,10 @@ class IndiaModel () :
         d = int(d)
         return f'{d} {m}'
 
-    def dx (self, x, t, module=np) : 
+    def dx (self, x, delta_t, startDate, module=np) : 
+
         xs = x.reshape((self.states, -1))
-        derivatives = [m.dx(x, t, module) for x, m in zip(xs, self.models)]
+        derivatives = [m.dx(x, delta_t, startDate, module) for x, m in zip(xs, self.models)]
         for m in self.models : 
             m.send()
 
@@ -63,7 +65,7 @@ class IndiaModel () :
 
         for m in self.models : 
             m.receive()
-
+        #pdb.set_trace()
         derivatives = [m.addCrossTerms(dx, module) for dx in derivatives]
         dx = cat[module](derivatives)
         return dx
@@ -96,11 +98,11 @@ class IndiaModel () :
             contactHome = np.loadtxt('./Data/home.csv', delimiter=',')
             contactTotal = np.loadtxt('./Data/total.csv', delimiter=',')
 
-            changeContactStart = Date('10 Nov')
-            changeContactEnd   = Date('15 Nov')
+            changeContactStart = self.lockdownEnd
+            changeContactEnd   = Date('15 May')
 
-            changeKt = Date('10 Nov')
-            deltaKt  = 10
+            changeKt = Date('16 Apr')
+            deltaKt  = 5
 
             beta, lockdownLeakiness, tf1, tf2, tf3  = self.betas[state]
 
@@ -234,7 +236,7 @@ class SpaxireAgeStratified () :
         self.rIn = sum([data['r'] for data in self.inChannel])
         self.inChannel.clear()
 
-    def dx (self, x, t, module=np) : 
+    def dx (self, x, delta_t, startDate, module=np) : 
         """
         This gives the derivative wrt time
         of the state vector. 
@@ -249,6 +251,9 @@ class SpaxireAgeStratified () :
         t : time step 
         module : whether to use torch or numpy
         """
+
+        t = startDate + int(delta_t)
+
         s, e, a, i, xs, xe, xa, xi, p, r = x.reshape((-1, self.bins))
 
         # convert depending on usage of this function
@@ -318,7 +323,7 @@ class SpaxireAgeStratified () :
         dr = self.gamma3 * p \
                 + self.gamma2 * (1 - self.testingFraction1(t)) * (i + xi) \
                 + (1 - self.testingFraction3(t)) * self.gamma1 * (e + xe) 
-
+        
         self.setStates (s, e, a, i, xs, xe, xa, xi, p, r)
         return cat[module]((ds, de, da, di, dxs, dxe, dxa, dxi, dp, dr))
 
@@ -343,6 +348,7 @@ class SpaxireAgeStratified () :
         di  += (self.iIn  - self.iOut)
         dr  += (self.rIn  - self.rOut)
 
+        #pdb.set_trace()
         return cat[module]((ds, de, da, di, dxs, dxe, dxa, dxi, dp, dr))
 
     def timeUpdate (self, x, t, module=np) : 

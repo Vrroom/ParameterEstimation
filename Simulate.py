@@ -8,6 +8,7 @@ from scipy.integrate import odeint
 from functools import partial
 import numpy as np 
 import pandas as pd
+import pdb
 
 def odeSimulator (model, x0, T) :
     dx = partial(model.dx, module=np)
@@ -114,21 +115,23 @@ class KalmanSimulator () :
     def __call__ (self, T) : 
         endDate = self.startDate + T
         series, variances = extendedKalmanFilter(
-                self.model.timeUpdate, self.x0, self.P0, 
+                self.model.dx, self.x0, self.P0, 
                 self.Q, self.H, self.R, self.Z, 
                 self.startDate, endDate)
         return series, variances
 
 if __name__ == "__main__" : 
-    with open('./Data/betaDistrict.json') as fd : 
+    with open('./Data/beta.json') as fd : 
         betas = json.load(fd)
-    transportMatrix = np.loadtxt('./Data/mahaTransportMatrix.csv', delimiter=',')
+    transportMatrix = np.loadtxt('./Data/transportMatrix.csv', delimiter=',')
     statePop  = [getStatePop(s) for s in Model.STATES]
     mortality = [0.01 * getAgeMortality(s) for s in Model.STATES]
     data = [getData(s) for s in Model.STATES]
     model = Model.IndiaModel(transportMatrix, betas, statePop, mortality, data) 
     seriesOfSeries = []
+    lastSeries = []
     seriesOfVariances = []
+    lastVariance = []
     for datum, m, nbar,state in zip(data, model.models, statePop, Model.STATES) : 
         E0 = [0, 10, 0]
         A0 = [0, 10, 0]
@@ -137,29 +140,32 @@ if __name__ == "__main__" :
         x0 = np.array([*(nbar.tolist()), *E0, *A0, *I0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0])
         ks = KalmanSimulator(datum, m, x0)
         series, variances = ks(model.lockdownEnd - ks.startDate)
-        seriesOfSeries.append(series)
-        seriesOfVariances.append(variances)
+        #pdb.set_trace()
+        seriesOfSeries.append(series[0:-1])
+        lastSeries.append(series[-1])
+        seriesOfVariances.append(variances[0:-1])
+        lastVariance.append(variances[-1])
         Plot.statePlot(series, variances, state, ks.startDate, 3, datum)
 
-    x0 = np.hstack([series[-1] for series in seriesOfSeries])
-    n = x0.size
-    P0 = np.zeros((n, n))
-    for i, _ in enumerate(Model.STATES):
-        P0[30*i:30*(i+1), 30*i: 30*(i+1)] = seriesOfVariances[i][-1]
+    x0 = np.hstack(lastSeries)
+    P0 = np.zeros((1110, 1110))
+    for i in range(37):
+        P0[30*i:30*(i+1), 30*i: 30*(i+1)] = lastVariance[i]
+    #pdb.set_trace()   
  
-    Q = 0.1 * np.eye(n)
+    Q = 0.1 * np.eye(1110)
     H = lambda t : np.array([])
     R = lambda t : np.array([])
     Z = lambda t : np.array([])
     tStart = model.lockdownEnd
     tEnd = Date('1 Jun')
 
-    newSeries, newVariances = extendedKalmanFilter(model.timeUpdate, x0, P0, Q, H, R, Z, tStart, tEnd)
+    newSeries, newVariances = extendedKalmanFilter(model.dx, x0, P0, Q, H, R, Z, tStart, tEnd)
 
     newVariances = [[v[30*i:30*(i+1), 30*i: 30*(i+1)] for i, _ in enumerate(Model.STATES)] for v in newVariances]
     newVariances = [[row[i] for row in newVariances] for i in range(len(newVariances[0]))] 
 
-    newSeries = newSeries.T.reshape((len(Model.STATES), 30, -1))
+    newSeries = newSeries.T.reshape((37, 30, -1))
     for i, _ in enumerate(Model.STATES) : 
         seriesOfSeries[i] = np.vstack((seriesOfSeries[i], newSeries[i].T))
         seriesOfVariances[i].extend(newVariances[i])
@@ -223,6 +229,7 @@ if __name__ == "__main__" :
         
         #print(len(datelist))
 
+        pdb.set_trace()
         df['Date'] = datelist
 
         df2['Date'] = datelist

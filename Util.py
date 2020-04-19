@@ -142,14 +142,14 @@ def bumpFn (t, ti, tf, x1, x2) :
 
 def getStatePop (state) : 
     fname = state + '.csv'
-    path = osp.join('./Data/Maharashtra_Age_3_bins/', fname)
+    path = osp.join('./Data/population/', fname)
     return np.loadtxt(path, delimiter=',', usecols=(1))
 
 def getAgeMortality (state) : 
     ageWise = np.loadtxt('./Data/ageWiseMortality.csv', delimiter=',', usecols=(1))
 
     fname = state + '.csv'
-    path = osp.join('./Data/Maharashtra_10_bins/', fname)
+    path = osp.join('./Data/ageBins/', fname)
 
     pop = np.loadtxt(path, delimiter=',', usecols=(1))
     pop = np.hstack((pop[:ageWise.size-1],pop[ageWise.size-1:].sum())) 
@@ -163,7 +163,7 @@ def getAgeMortality (state) :
 
 def getData (state) : 
     fname = state + '.csv'
-    path = osp.join('./Data/Maharashtra_final/', fname)
+    path = osp.join('./Data/time_series/', fname)
     return pandas.read_csv(path)
     
 def sigmoid (x) : 

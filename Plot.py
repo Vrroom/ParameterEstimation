@@ -41,11 +41,35 @@ def statePlot (series, variances, state, beginDate, step, groundTruth) :
     colors = ['b', 'g', 'r']
     p, p_std = gather(T, series, variances, compartments['P'])
     symptomatics, symptomatics_std = gather(T, series, variances, compartments['P'] + compartments['I'] + compartments['Xi'] + compartments['A'] + compartments['Xa'])
-    fig, ax1 = plt.subplots(nrows=1, ncols=1, sharex=True, figsize=(20, 10))
-    fig.suptitle(state, fontsize=25)
+    
+    #Plotting Standard Deviations for each state
+
     tickLabels = list(DateIter(beginDate, beginDate + T + 30))[::step]
     tickLabels = [d.date for d in tickLabels]
     tickLabels = ['', *tickLabels]
+
+    fig_std, ax3 = plt.subplots(nrows=1, ncols=1, sharex=True, figsize=(20, 10))
+    fig_std.suptitle(state, fontsize=25)
+
+    ax3.plot(np.arange(T), p_std, color = colors[0], label = "Standard Deviation: Tested Positive")
+    ax3.plot(np.arange(T), symptomatics_std, color = colors[1], label = "Standard Deviation: Infected")
+    
+    ax3.legend(fontsize = 20, loc="upper left")
+    ax3.set_xlabel('Time / days', fontsize=25)
+    ax3.set_ylabel('Number of people', fontsize=25)
+    # ax1.set_yscale('log')
+    ax3.xaxis.set_major_locator(ticker.MultipleLocator(step))
+    ax3.set_xticklabels(tickLabels, rotation = 'vertical')
+    ax3.tick_params(axis='both', which='major', labelsize=20)
+
+    fig_std.savefig('./Plots/' + state + '_STDDEV')
+    plt.close(fig_std)
+    plt.clf()
+
+    #Plotting Actual State Predictions
+
+    fig, ax1 = plt.subplots(nrows=1, ncols=1, sharex=True, figsize=(20, 10))
+    fig.suptitle(state, fontsize=25)
     
     ax1.plot(np.arange(T), p, color = colors[0], label = "Tested Positive")
     ax1.fill_between(np.arange(T), np.maximum(p - p_std, 0), p + p_std, facecolor = colors[0], alpha=0.2)
@@ -100,8 +124,7 @@ def statePlot (series, variances, state, beginDate, step, groundTruth) :
     ax2.set_xticklabels(tickLabels, rotation = 'vertical')
     ax2.tick_params(axis='both', which='major', labelsize=18)
 
-
     plt.gcf().subplots_adjust(bottom=0.2)
     fig.savefig('./Plots/' + state)
     plt.close(fig)
-    
+    plt.clf()
