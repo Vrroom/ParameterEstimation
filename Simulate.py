@@ -120,9 +120,9 @@ class KalmanSimulator () :
         return series, variances
 
 if __name__ == "__main__" : 
-    with open('./Data/beta.json') as fd : 
+    with open('./Data/betaDistrict.json') as fd : 
         betas = json.load(fd)
-    transportMatrix = np.loadtxt('./Data/transportMatrix.csv', delimiter=',')
+    transportMatrix = np.loadtxt('./Data/mahaTransportMatrix.csv', delimiter=',')
     statePop  = [getStatePop(s) for s in Model.STATES]
     mortality = [0.01 * getAgeMortality(s) for s in Model.STATES]
     data = [getData(s) for s in Model.STATES]
@@ -142,11 +142,12 @@ if __name__ == "__main__" :
         Plot.statePlot(series, variances, state, ks.startDate, 3, datum)
 
     x0 = np.hstack([series[-1] for series in seriesOfSeries])
-    P0 = np.zeros((1110, 1110))
-    for i in range(37):
+    n = x0.size
+    P0 = np.zeros((n, n))
+    for i, _ in enumerate(Model.STATES):
         P0[30*i:30*(i+1), 30*i: 30*(i+1)] = seriesOfVariances[i][-1]
  
-    Q = 0.1 * np.eye(1110)
+    Q = 0.1 * np.eye(n)
     H = lambda t : np.array([])
     R = lambda t : np.array([])
     Z = lambda t : np.array([])
@@ -158,7 +159,7 @@ if __name__ == "__main__" :
     newVariances = [[v[30*i:30*(i+1), 30*i: 30*(i+1)] for i, _ in enumerate(Model.STATES)] for v in newVariances]
     newVariances = [[row[i] for row in newVariances] for i in range(len(newVariances[0]))] 
 
-    newSeries = newSeries.T.reshape((37, 30, -1))
+    newSeries = newSeries.T.reshape((len(Model.STATES), 30, -1))
     for i, _ in enumerate(Model.STATES) : 
         seriesOfSeries[i] = np.vstack((seriesOfSeries[i], newSeries[i].T))
         seriesOfVariances[i].extend(newVariances[i])

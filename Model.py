@@ -1,4 +1,4 @@
-# 1b
+# 2a
 from Util import *
 import json
 import random
@@ -15,18 +15,18 @@ from Plot import *
 
 cat = {np : np.hstack, torch : torch.cat}
 
-STATES = ['ANDAMAN&NICOBAR','ANDHRAPRADESH','ARUNACHALPRADESH',
-        'ASSAM','BIHAR','CHANDIGARH',
-        'CHHATTISGARH','DADRA&NAGARHAVELI','DAMAN&DIU',
-        'GOA','GUJARAT','HARYANA',
-        'HIMACHALPRADESH','JAMMU&KASHMIR','JHARKHAND',
-        'KARNATAKA','KERALA','LADAK',
-        'LAKSHADWEEP','MADHYAPRADESH','MAHARASHTRA',
-        'MANIPUR','MEGHALAYA','MIZORAM',
-        'NCTOFDELHI','NAGALAND','ODISHA',
-        'PUDUCHERRY','PUNJAB','RAJASTHAN',
-        'SIKKIM','TAMILNADU','TELANGANA',
-        'TRIPURA','UTTARPRADESH','UTTARAKHAND','WESTBENGAL']
+STATES = ["Ahmadnagar","Akola","Amravati",
+        "Aurangabad","Bhandara","Bid",
+        "Buldana","Chandrapur","Dhule",
+        "Garhchiroli","Gondiya","Hingoli",
+        "Jalgaon","Jalna","Kolhapur","Latur",
+        "MumbaiCity","MumbaiSuburban","Nagpur",
+        "Nanded","Nandurbar","Nashik",
+        "Osmanabad","Palghar","Parbhani" ,
+        "Pune","Raigarh","Ratnagiri",
+        "Sangli","Satara","Sindhudurg",
+        "Solapur","Thane","Wardha",
+        "Washim","Yavatmal"]
 
 class IndiaModel () : 
 
@@ -96,8 +96,8 @@ class IndiaModel () :
             contactHome = np.loadtxt('./Data/home.csv', delimiter=',')
             contactTotal = np.loadtxt('./Data/total.csv', delimiter=',')
 
-            changeContactStart = self.lockdownEnd
-            changeContactEnd   = Date('15 May')
+            changeContactStart = Date('10 Nov')
+            changeContactEnd   = Date('15 Nov')
 
             changeKt = Date('10 Nov')
             deltaKt  = 10
