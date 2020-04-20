@@ -48,6 +48,8 @@ def extendedKalmanFilter (updateStep, x0, P0, Q, H, R, Z, tStart, tEnd) :
     PPrev = P0
     xs = [x0]
     Ps = [P0]
+
+    d1 = Date('27 Apr')
     #print(tEnd.date)
         
     for date in tqdm(DateIter(tStart, tEnd)) :
@@ -66,6 +68,10 @@ def extendedKalmanFilter (updateStep, x0, P0, Q, H, R, Z, tStart, tEnd) :
         h = H(date+1)
         r = R(date+1)
         z = Z(date+1)
+
+        #if(date >= d1):
+        	#pdb.set_trace()
+
         if h.size > 0 : 
             K = PMinus @ h.T @ np.linalg.inv(h @ PMinus @ h.T + r)
             xt = xtMinus + K @ (z - h @ xtMinus)
@@ -81,11 +87,12 @@ def extendedKalmanFilter (updateStep, x0, P0, Q, H, R, Z, tStart, tEnd) :
 
             xt = xtMinus
             Pt = PMinus
+
         
         xs.append(xt)
         Ps.append(Pt)
 
-        print(date.date)
+        #print(date.date)
 
     return np.stack(xs), Ps
 

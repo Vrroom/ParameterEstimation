@@ -224,12 +224,12 @@ if __name__ == "__main__" :
         df2 = df2.T
 
 
-        datelist = [f'{date.day}/{date.month}/2020' for date in DateIter(ks.startDate, tEnd)]
+        datelist = [f'{date.day}/{date.month}/2020' for date in DateIter(ks.startDate, tEnd + 1)]
         #print(len(datelist), len(infected_active))
         
         #print(len(datelist))
 
-        pdb.set_trace()
+        #pdb.set_trace()
         df['Date'] = datelist
 
         df2['Date'] = datelist
