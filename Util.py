@@ -120,12 +120,15 @@ def dictProduct (d) :
     return map(dict, product(*map(lambda x : product([x[0]], x[1]), d.items())))
 
 def climbFn (t, ti, tf, xi, xf) : 
-    if t > tf : 
+    if t >= tf : 
+        #print("After")
         return xf
-    elif ti < t < tf : 
+    elif ti <= t < tf : 
         wt = (t - ti) / (tf - ti)
+        #print("During :"+str(wt))
         return xf * wt + xi * (1 - wt)
     else : 
+        #print("Before")
         return xi
 
 def stepFn (t, t0, x1, x2) : 

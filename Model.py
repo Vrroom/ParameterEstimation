@@ -127,7 +127,7 @@ class IndiaModel () :
                 'adultBins'         : [1],
                 'testingFraction1'  : partial(climbFn, ti=changeKt, tf=changeKt+deltaKt, xi=tf1, xf=0.8),
                 'testingFraction2'  : partial(climbFn, ti=changeKt, tf=changeKt+deltaKt, xi=tf2, xf=0.5),
-                'testingFraction3'  : partial(climbFn, ti=changeKt, tf=changeKt+deltaKt, xi=tf2, xf=0.5),
+                'testingFraction3'  : partial(climbFn, ti=changeKt, tf=changeKt+deltaKt, xi=tf3, xf=0.5),
                 'totalOut'          : self.transportMatrix[:, idx].sum(),
                 'Nbar'              : self.statePop[idx],
                 'mortality'         : self.mortality[idx]
@@ -251,8 +251,8 @@ class SpaxireAgeStratified () :
         t : time step 
         module : whether to use torch or numpy
         """
-
         t = startDate + int(delta_t)
+        #print("Model Date: "+str(t.date))
 
         s, e, a, i, xs, xe, xa, xi, p, r = x.reshape((-1, self.bins))
 

@@ -5,6 +5,7 @@ import pandas
 from Model import *
 from Simulate import *
 from more_itertools import collapse
+import pdb
 
 def gather(T, series, variances, indices):
     outputSeries = [sum(x[index] for index in indices) for x in series]

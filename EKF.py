@@ -55,22 +55,19 @@ def extendedKalmanFilter (updateStep, x0, P0, Q, H, R, Z, tStart, tEnd) :
     for date in tqdm(DateIter(tStart, tEnd)) :
         # Time update
         i = date - tStart
-        #pdb.set_trace()
         xtMinus = scipy.integrate.odeint(updateStep,xPrev,[i,i+1],args=(tStart,))
-        #pdb.set_trace()
         xtMinus = xtMinus[1]
         A = getProcessJacobians(partial(updateStep, delta_t=i, startDate=tStart), xPrev)
-        #A = nd.Jacobian(partial(updateStep, delta_t=i, startDate=tStart))(xPrev)
+        m = np.shape(A)
+        #A1 = nd.Jacobian(partial(updateStep, delta_t=i, startDate=tStart))(xPrev)
         phi = scipy.linalg.expm(A)
+        #phi1 = scipy.linalg.expm(A1)
         PMinus = phi @ PPrev @ phi.T + Q
 
         # Measurement update
         h = H(date+1)
         r = R(date+1)
         z = Z(date+1)
-
-        #if(date >= d1):
-        	#pdb.set_trace()
 
         if h.size > 0 : 
             K = PMinus @ h.T @ np.linalg.inv(h @ PMinus @ h.T + r)
@@ -79,20 +76,21 @@ def extendedKalmanFilter (updateStep, x0, P0, Q, H, R, Z, tStart, tEnd) :
 
             xt[xt < 0] = np.maximum(xt[xt < 0], np.maximum(0, xPrev[xt < 0])) # Shameless Hack
 
-            xPrev = xt
-            PPrev = Pt
         else : 
-            xPrev = xtMinus
-            PPrev = PMinus
 
             xt = xtMinus
             Pt = PMinus
 
-        
+        #if date - Date('16 Apr') == 0:
+            #pdb.set_trace()
+
+        xPrev = xt
+        PPrev = Pt
+
         xs.append(xt)
         Ps.append(Pt)
 
-        #print(date.date)
+        #print("EKF Date: "+str(date.date))
 
     return np.stack(xs), Ps
 
