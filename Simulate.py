@@ -140,7 +140,6 @@ if __name__ == "__main__" :
         x0 = np.array([*(nbar.tolist()), *E0, *A0, *I0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0])
         ks = KalmanSimulator(datum, m, x0)
         series, variances = ks(model.lockdownEnd - ks.startDate)
-        #pdb.set_trace()
         seriesOfSeries.append(series[0:-1])
         lastSeries.append(series[-1])
         seriesOfVariances.append(variances[0:-1])
@@ -151,8 +150,7 @@ if __name__ == "__main__" :
     P0 = np.zeros((1110, 1110))
     for i in range(37):
         P0[30*i:30*(i+1), 30*i: 30*(i+1)] = lastVariance[i]
-    #pdb.set_trace()   
- 
+    
     Q = 0.1 * np.eye(1110)
     H = lambda t : np.array([])
     R = lambda t : np.array([])
@@ -229,7 +227,6 @@ if __name__ == "__main__" :
         
         #print(len(datelist))
 
-        #pdb.set_trace()
         df['Date'] = datelist
 
         df2['Date'] = datelist

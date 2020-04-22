@@ -7,6 +7,15 @@ from Simulate import *
 from more_itertools import collapse
 import pdb
 
+def MyTicks(x, pos):
+    'The two args are the value and tick position'
+    if pos is not None:
+        tick_locs=ax.yaxis.get_majorticklocs()      # Get the list of all tick locations
+        str_tl=str(tick_locs).split()[1:-1]         # convert the numbers to list of strings
+        p=max(len(i)-i.find('.')-1 for i in str_tl) # calculate the maximum number of non zero digit after "."
+        p=max(1,p)                                  # make sure that at least one zero after the "." is displayed
+        return "pos:{0}/x:{1:1.{2}f}".format(pos,x,p)
+
 def gather(T, series, variances, indices):
     outputSeries = [sum(x[index] for index in indices) for x in series]
     outputVariances = [x[indices, :][:, indices].sum() for x in variances]
@@ -16,6 +25,7 @@ def gather(T, series, variances, indices):
 def statePlot (series, variances, state, beginDate, step, groundTruth) : 
     T = len(series)
     compartments = {k: [3*i, 3*i + 1, 3*i + 2] for i, k in enumerate(['S', 'E', 'A', 'I', 'Xs', 'Xe', 'Xa', 'Xi', 'P', 'R'])}
+
     '''
     bins = ['0-20', '20-60', '60+']
     series = series.T.reshape((10, -1, T))
@@ -44,10 +54,12 @@ def statePlot (series, variances, state, beginDate, step, groundTruth) :
     symptomatics, symptomatics_std = gather(T, series, variances, compartments['P'] + compartments['I'] + compartments['Xi'] + compartments['A'] + compartments['Xa'])
     
     #Plotting Standard Deviations for each state
-
-    tickLabels = list(DateIter(beginDate, beginDate + T + 30))[::step]
+    endDate = beginDate + T - 1
+    tickLabels = list(DateIter(beginDate, endDate + step))[::step]
     tickLabels = [d.date for d in tickLabels]
     tickLabels = ['', *tickLabels]
+    if(T > 65):
+        tickLabels = ['', *tickLabels]
 
     fig_std, ax3 = plt.subplots(nrows=1, ncols=1, sharex=True, figsize=(20, 10))
     fig_std.suptitle(state, fontsize=25)
@@ -118,9 +130,13 @@ def statePlot (series, variances, state, beginDate, step, groundTruth) :
     # ax2.set_xlabel('Time / days', fontsize=25)
     # ax2.set_ylabel('Number of people', fontsize=25)
     # ax1.set_yscale('log')
-    tickLabels = list(DateIter(beginDate, beginDate + T + 30))[::7]
+    endDate = beginDate + T - 1
+    endDate = beginDate + T - 1
+    tickLabels = list(DateIter(beginDate, endDate + step))[::step]
     tickLabels = [d.date for d in tickLabels]
     tickLabels = ['', *tickLabels]
+    if(T > 65):
+        tickLabels = ['', *tickLabels]
     ax2.xaxis.set_major_locator(ticker.MultipleLocator(7))
     ax2.set_xticklabels(tickLabels, rotation = 'vertical')
     ax2.tick_params(axis='both', which='major', labelsize=18)
