@@ -26,6 +26,7 @@ def statePlot (series, variances, state, beginDate, step, groundTruth) :
     T = len(series)
     compartments = {k: [3*i, 3*i + 1, 3*i + 2] for i, k in enumerate(['S', 'E', 'A', 'I', 'Xs', 'Xe', 'Xa', 'Xi', 'P', 'R'])}
 
+    #print(beginDate.date)
     '''
     bins = ['0-20', '20-60', '60+']
     series = series.T.reshape((10, -1, T))
@@ -131,12 +132,9 @@ def statePlot (series, variances, state, beginDate, step, groundTruth) :
     # ax2.set_ylabel('Number of people', fontsize=25)
     # ax1.set_yscale('log')
     endDate = beginDate + T - 1
-    endDate = beginDate + T - 1
-    tickLabels = list(DateIter(beginDate, endDate + step))[::step]
+    tickLabels = list(DateIter(beginDate, endDate + 7))[::7]
     tickLabels = [d.date for d in tickLabels]
     tickLabels = ['', *tickLabels]
-    if(T > 65):
-        tickLabels = ['', *tickLabels]
     ax2.xaxis.set_major_locator(ticker.MultipleLocator(7))
     ax2.set_xticklabels(tickLabels, rotation = 'vertical')
     ax2.tick_params(axis='both', which='major', labelsize=18)

@@ -45,14 +45,24 @@ class KalmanSimulator () :
         self.h1[24:27] = model.mortality.tolist() # Setting mortality
         self.h2[-6:-3] = [1,1,1] # Setting P
 
-        self.setP0() 
+        self.setP0(np.sum(x0),25) 
         self.setQ()
 
-    def setP0(self) : 
+    def setP0(self, pop, pop_x):
+
+    	##################################################
+    			#1e7 -> std 1e4
         self.P0 = np.eye(30)
+        #pdb.set_trace()
+        n = math.floor(math.log10(pop))*0.6
+        p = 10**(0.5*n - 1)
+        n_x = math.floor(math.log10(pop_x))*0.6
+        p_x = 10**(0.5*n_x - 1)
+        self.P0 = np.diag([p**2,p,p,p, p_x**2,p_x,p_x,p_x, 10,10] * 2 + [(p**2)/10,p/10,p/10,p/10, (p_x**2)/10,p_x/10,p_x/10,p_x/10,10,10])
 
     def setQ (self) :
         self.Q = np.eye(30)
+        self.Q = np.diag([1e3,1e2,1e2,1e2, 1e3,1e2,1e2, 1e2,0,1e1] * 2 + [1e2,1e1,1e1,1e1 ,1e2,1e1,1e1,1e1, 0,1e1])
     
     def splitDates (self, date) : 
         d, m, _ = date.split('-')
@@ -96,29 +106,38 @@ class KalmanSimulator () :
             else : 
                 return np.array([])
 
-    def R (self, date): 
+    def R (self, date, z): 
         if self.peopleDied : 
             if date < self.firstCases : 
+                r_m = 10**(1*math.e**(-1*z[0]))
+                return r_m
                 return np.array([1])
             elif self.firstCases <= date <= self.dataEndDate - 17 :
+                r_m = 10**(1*math.e**(-1*z[0]))
+                r_p = 10**(2*math.e**(-0.2*z[0]))    
+                return np.diag([r_m,r_p])        	            	
                 return np.eye(2)
             elif self.dataEndDate - 17 < date <= self.dataEndDate : 
+                r_p = 10**(2*math.e**(-0.2*z[0]))    
+                return r_p
                 return np.array([1])
             else :
                 return np.array([])
         else : 
-            if date <= self.dataEndDate : 
+            if date <= self.dataEndDate :
+                r_p = 10**(2*math.e**(-0.2*z[0]))    
+                return r_p
                 return np.array([1])
             else : 
                 return np.array([])
 
     def __call__ (self, T) : 
         endDate = self.startDate + T
-        series, variances = extendedKalmanFilter(
+        series, variances, process_noise = extendedKalmanFilter(
                 self.model.dx, self.x0, self.P0, 
                 self.Q, self.H, self.R, self.Z, 
                 self.startDate, endDate)
-        return series, variances
+        return series, variances, process_noise
 
 if __name__ == "__main__" : 
     with open('./Data/beta.json') as fd : 
@@ -132,6 +151,8 @@ if __name__ == "__main__" :
     lastSeries = []
     seriesOfVariances = []
     lastVariance = []
+    Q = np.zeros((1110, 1110))
+    i = 0
     for datum, m, nbar,state in zip(data, model.models, statePop, Model.STATES) : 
         E0 = [0, 10, 0]
         A0 = [0, 10, 0]
@@ -139,11 +160,14 @@ if __name__ == "__main__" :
         nbar[1] -= 30
         x0 = np.array([*(nbar.tolist()), *E0, *A0, *I0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0])
         ks = KalmanSimulator(datum, m, x0)
-        series, variances = ks(model.lockdownEnd - ks.startDate)
+        series, variances, process_noise = ks(model.lockdownEnd - ks.startDate)
         seriesOfSeries.append(series[0:-1])
         lastSeries.append(series[-1])
         seriesOfVariances.append(variances[0:-1])
         lastVariance.append(variances[-1])
+        Q[30*i:30*(i+1), 30*i: 30*(i+1)] = process_noise
+        i = i + 1
+
         Plot.statePlot(series, variances, state, ks.startDate, 3, datum)
 
     x0 = np.hstack(lastSeries)
@@ -151,14 +175,13 @@ if __name__ == "__main__" :
     for i in range(37):
         P0[30*i:30*(i+1), 30*i: 30*(i+1)] = lastVariance[i]
     
-    Q = 0.1 * np.eye(1110)
     H = lambda t : np.array([])
-    R = lambda t : np.array([])
     Z = lambda t : np.array([])
+    R = lambda t, z : np.array([])
     tStart = model.lockdownEnd
     tEnd = Date('1 Jun')
 
-    newSeries, newVariances = extendedKalmanFilter(model.dx, x0, P0, Q, H, R, Z, tStart, tEnd)
+    newSeries, newVariances, process_noise = extendedKalmanFilter(model.dx, x0, P0, Q, H, R, Z, tStart, tEnd)
 
     newVariances = [[v[30*i:30*(i+1), 30*i: 30*(i+1)] for i, _ in enumerate(Model.STATES)] for v in newVariances]
     newVariances = [[row[i] for row in newVariances] for i in range(len(newVariances[0]))] 

@@ -66,8 +66,8 @@ def extendedKalmanFilter (updateStep, x0, P0, Q, H, R, Z, tStart, tEnd) :
 
         # Measurement update
         h = H(date+1)
-        r = R(date+1)
         z = Z(date+1)
+        r = R(date+1,z)
 
         if h.size > 0 : 
             K = PMinus @ h.T @ np.linalg.inv(h @ PMinus @ h.T + r)
@@ -92,7 +92,7 @@ def extendedKalmanFilter (updateStep, x0, P0, Q, H, R, Z, tStart, tEnd) :
 
         #print("EKF Date: "+str(date.date))
 
-    return np.stack(xs), Ps
+    return np.stack(xs), Ps, Q
 
 if __name__ == "__main__" : 
     print(getJacobian(sin, torch.tensor([0., 1.])))
