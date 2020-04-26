@@ -1,0 +1,9 @@
+{
+	"timeSeries"      : "./Data/time_series", 
+	"ageBins10"       : "./Data/ageBins",
+	"ageBins3"        : "./Data/population",
+	"ageMortality"    : "./Data/ageWiseMortality.csv",
+	"transportMatrix" : "./Data/transportMatrix.csv",
+	"contactHome"     : "./Data/home.csv",
+	"contactTotal"    : "./Data/total.csv"
+}

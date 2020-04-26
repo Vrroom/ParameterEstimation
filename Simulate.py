@@ -1,7 +1,8 @@
 from Util import *
+from EKF import *
+from Date import *
 import pickle
 import Plot
-from EKF import *
 import json
 import Model
 from scipy.integrate import odeint
@@ -14,234 +15,179 @@ def odeSimulator (model, x0, T) :
     result = odeint(dx, x0, T)
     return result
 
-class KalmanSimulator () :
+def completeSimulator (data, model) : 
 
-    def __init__ (self, data, model, x0) : 
-        self.x0 = x0
+    def saveOutput () : 
 
-        self.data = data
-        self.model = model
-        self.dates = data['Date'].map(self.splitDates)
+        def getDeaths () : 
+            mortality = data.mortality[idx]
+            deadDaily = np.sum(mortality * 0.01 * (x[:,9:12] + x[:,21:24] + x[:,24:27]), axis=1)
+            deadDaily = deadDaily[:-17]
+            deadDaily = np.concatenate([np.zeros(17), deadDaily])
+            deadTotal = np.cumsum(deadDaily)
+            return deadDaily, deadTotal
 
-        self.firstCases = Date(self.dates.iloc[0])
-        self.dataEndDate = Date(self.dates.iloc[-1])
+        def getRecovered () : 
+            recoveredTotal = np.sum(x[:,27:30], axis=1)
+            recoveredDaily = np.insert(np.diff(recoveredTotal), 0 , recoveredTotal[0])
+            recoveredDaily = recoveredDaily - deadDaily
+            recoveredTotal = np.cumsum(recoveredDaily)
+            return recoveredDaily, recoveredTotal
 
-        self.peopleDied = self.dates[data['Total Dead'] > 0].size > 0
-        if self.peopleDied : 
-            self.firstDeath = Date(self.dates[data['Total Dead'] > 0].iloc[0])
-            self.startDate = self.firstDeath - 17
-            self.deaths = self.data['Daily Dead'][data['Total Dead'] > 0].to_numpy()
-        else : 
-            self.startDate = self.firstCases
+        def getInfected () : 
+            infectedActive = np.sum(x[:,3:6] + x[:,15:18] + x[:,6:9] 
+                    + x[:,9:12] + x[:,18:21] + x[:,21:24]
+                    + x[:,24:27], axis=1)
+            infectedDaily = np.insert(np.diff(infectedActive), 0 , infectedActive[0])
+            infectedDaily = infectedDaily + recoveredDaily + deadDaily
+            return infectedDaily, infectedActive
 
-        self.P = (data['Total Cases'] - data['Total Recovered'] - data['Total Dead']).to_numpy()
+        with open('xs.pkl', 'wb') as fd : 
+            pickle.dump(xs, fd)
+
+        with open('vs.pkl', 'wb') as fd : 
+            pickle.dump(vs, fd)
+
+        df1s, df2s = [], []
+        for idx, x, v, place in zip(range(model.nPlaces), xs, vs, data.places) : 
+            startDate = data.placeData[place]['startDate']
+            Plot.statePlot(x, v, place, startDate, 3, data.timeSeries[idx])
+            deadDaily, deadTotal = getDeaths()
+            recoveredDaily, recoveredTotal = getRecovered()
+            infectedDaily, infectedActive = getInfected()
+            stateIds = np.ones(tEnd - startDate + 1, dtype = int) * int(idx + 1)
+
+            header1 = ["State Id", "Number of infected (new)", "Number of Death (New)", "Number of Recovery (New)"] 
+            header2 = ["State id", "Simulated total infected", "Simulated total death", "Simulated total recovery"]
+
+            df1 = pd.DataFrame(data=[stateIds, infectedDaily, deadDaily, recoveredDaily], index=header1).T
+            df2 = pd.DataFrame(data=[stateIds, infectedActive, deadTotal, recoveredTotal], index=header2).T
+
+            datelist = [f'{date.day}/{date.month}/2020' for date in DateIter(startDate, tEnd + 1)]
+
+            df1['Date'] = df2['Date'] = datelist
+
+            df1 = df1[header1]
+            df2 = df2[header2]
+
+            df1s.append(df1)
+            df2s.append(df2)
+
+        df1 = pd.concat(df1s, ignore_index=True)
+        df2 = pd.concat(df2s, ignore_index=True)
+
+        df1.to_csv('sheet1.csv', index=False)
+        df2.to_csv('sheet2.csv', index=False)
+
+    def individualPlaceSimulator (place) : 
+
+        def getX0 () : 
+            nbar = data.ageBins3[placeIndex]
+            nbar[1] -= 30
+            x0 = np.zeros(n)
+            x0[:3] = nbar
+            x0[3:6] = x0[6:9] = x0[9:12] = [0, 10, 0]
+            return x0
+
+        def H (date) : 
+            if peopleDied : 
+                if date < firstCases : 
+                    return np.array([h1])
+                elif firstCases <= date <= dataEndDate - 17 :
+                    return np.array([h1, h2])
+                elif dataEndDate - 17 < date <= dataEndDate : 
+                    return np.array([h2])
+                else :
+                    return np.array([])
+            else :
+                if date <= dataEndDate : 
+                    return np.array([h2])
+                else :
+                    return np.array([])
+            
+        def Z (date) :
+            if peopleDied : 
+                if date < firstCases : 
+                    m = deaths[date - startDate]
+                    return np.array([m])
+                elif firstCases <= date <= dataEndDate - 17 :
+                    m = deaths[date - startDate]
+                    p = P[date - firstCases]
+                    return np.array([m, p])
+                elif dataEndDate - 17 < date <= dataEndDate : 
+                    p = P[date - firstCases]
+                    return np.array([p])
+                else :
+                    return np.array([])
+            else : 
+                if date <= dataEndDate : 
+                    p = P[date - firstCases]
+                    return np.array([p])
+                else : 
+                    return np.array([])
+
+        def R (date) :
+            if peopleDied : 
+                if date < firstCases : 
+                    return np.array([1])
+                elif firstCases <= date <= dataEndDate - 17 :
+                    return np.eye(2)
+                elif dataEndDate - 17 < date <= dataEndDate : 
+                    return np.array([1])
+                else :
+                    return np.array([])
+            else : 
+                if date <= dataEndDate : 
+                    return np.array([1])
+                else : 
+                    return np.array([])
+
+        placeIndex = data.places.index(place)
         
-        self.h1, self.h2 = [0] * 30, [0] * 30 
-        self.h1[9:12] = model.mortality.tolist() # Setting mortality
+        startDate = data.placeData[place]['startDate']
+        firstCases = data.placeData[place]['firstCase']
+        dataEndDate = data.placeData[place]['dataEnd']
+        peopleDied = data.placeData[place]['peopleDied']
+        deaths = data.placeData[place]['deaths']
+        P = data.placeData[place]['P']
 
-        self.h1[21:24] = model.mortality.tolist() # Setting mortality
+        n = 30
+        h1, h2 = [0] * n, [0] * n
+        h1[9:12] = h1[21:24] = h1[24:27] = data.mortality[placeIndex]
+        h2[-6:-3] = [1,1,1]
 
-        self.h1[24:27] = model.mortality.tolist() # Setting mortality
-        self.h2[-6:-3] = [1,1,1] # Setting P
+        P0, Q = np.eye(n), np.eye(n)
+        interval = DateIter(startDate, model.models[placeIndex].te)
+        xs, vs = dummyKF(model.models[placeIndex].timeUpdate, getX0(), P0, Q, H, R, Z, interval)
 
-        self.setP0() 
-        self.setQ()
+        return xs, vs
 
-    def setP0(self) : 
-        self.P0 = np.eye(30)
+    tillLockdown = [individualPlaceSimulator(p) for p in data.places]
 
-    def setQ (self) :
-        self.Q = np.eye(30)
-    
-    def splitDates (self, date) : 
-        d, m, _ = date.split('-')
-        d = int(d)
-        return f'{d} {m}'
-
-    def H (self, date) : 
-        if self.peopleDied : 
-            if date < self.firstCases : 
-                return np.array([self.h1])
-            elif self.firstCases <= date <= self.dataEndDate - 17 :
-                return np.array([self.h1, self.h2])
-            elif self.dataEndDate - 17 < date <= self.dataEndDate : 
-                return np.array([self.h2])
-            else :
-                return np.array([])
-        else :
-            if date <= self.dataEndDate : 
-                return np.array([self.h2])
-            else :
-                return np.array([])
-
-    def Z (self, date): 
-        if self.peopleDied : 
-            if date < self.firstCases : 
-                m = self.deaths[date - self.startDate]
-                return np.array([m])
-            elif self.firstCases <= date <= self.dataEndDate - 17 :
-                m = self.deaths[date - self.startDate]
-                p = self.P[date - self.firstCases]
-                return np.array([m, p])
-            elif self.dataEndDate - 17 < date <= self.dataEndDate : 
-                p = self.P[date - self.firstCases]
-                return np.array([p])
-            else :
-                return np.array([])
-        else : 
-            if date <= self.dataEndDate : 
-                p = self.P[date - self.firstCases]
-                return np.array([p])
-            else : 
-                return np.array([])
-
-    def R (self, date): 
-        if self.peopleDied : 
-            if date < self.firstCases : 
-                return np.array([1])
-            elif self.firstCases <= date <= self.dataEndDate - 17 :
-                return np.eye(2)
-            elif self.dataEndDate - 17 < date <= self.dataEndDate : 
-                return np.array([1])
-            else :
-                return np.array([])
-        else : 
-            if date <= self.dataEndDate : 
-                return np.array([1])
-            else : 
-                return np.array([])
-
-    def __call__ (self, T) : 
-        endDate = self.startDate + T
-        series, variances = extendedKalmanFilter(
-                self.model.timeUpdate, self.x0, self.P0, 
-                self.Q, self.H, self.R, self.Z, 
-                self.startDate, endDate)
-        return series, variances
-
-if __name__ == "__main__" : 
-    with open('./Data/betaDistrict.json') as fd : 
-        betas = json.load(fd)
-    transportMatrix = np.loadtxt('./Data/mahaTransportMatrix.csv', delimiter=',')
-    statePop  = [getStatePop(s) for s in Model.STATES]
-    mortality = [0.01 * getAgeMortality(s) for s in Model.STATES]
-    data = [getData(s) for s in Model.STATES]
-    model = Model.IndiaModel(transportMatrix, betas, statePop, mortality, data) 
-    seriesOfSeries = []
-    seriesOfVariances = []
-    for datum, m, nbar,state in zip(data, model.models, statePop, Model.STATES) : 
-        E0 = [0, 10, 0]
-        A0 = [0, 10, 0]
-        I0 = [0, 10, 0]
-        nbar[1] -= 30
-        x0 = np.array([*(nbar.tolist()), *E0, *A0, *I0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0])
-        ks = KalmanSimulator(datum, m, x0)
-        series, variances = ks(model.lockdownEnd - ks.startDate)
-        seriesOfSeries.append(series)
-        seriesOfVariances.append(variances)
-        Plot.statePlot(series, variances, state, ks.startDate, 3, datum)
-
-    x0 = np.hstack([series[-1] for series in seriesOfSeries])
+    x0 = np.hstack([xs[-1] for xs, _ in tillLockdown])
     n = x0.size
     P0 = np.zeros((n, n))
-    for i, _ in enumerate(Model.STATES):
-        P0[30*i:30*(i+1), 30*i: 30*(i+1)] = seriesOfVariances[i][-1]
+    for i, _ in enumerate(data.places):
+        _, vs = tillLockdown[i]
+        P0[30*i:30*(i+1), 30*i: 30*(i+1)] = vs[-1]
  
     Q = 0.1 * np.eye(n)
-    H = lambda t : np.array([])
-    R = lambda t : np.array([])
-    Z = lambda t : np.array([])
+    H = R = Z = lambda t : np.array([])
     tStart = model.lockdownEnd
-    tEnd = Date('1 Jun')
+    tEnd = Date('10 Nov')
 
-    newSeries, newVariances = extendedKalmanFilter(model.timeUpdate, x0, P0, Q, H, R, Z, tStart, tEnd)
+    nxs, nvs = dummyKF(model.timeUpdate, x0, P0, Q, H, R, Z, DateIter(tStart, tEnd))
 
-    newVariances = [[v[30*i:30*(i+1), 30*i: 30*(i+1)] for i, _ in enumerate(Model.STATES)] for v in newVariances]
-    newVariances = [[row[i] for row in newVariances] for i in range(len(newVariances[0]))] 
+    nvs = [[v[30*i:30*(i+1), 30*i: 30*(i+1)] for i, _ in enumerate(data.places)] for v in nvs]
+    nvs = transpose(nvs)
 
-    newSeries = newSeries.T.reshape((len(Model.STATES), 30, -1))
-    for i, _ in enumerate(Model.STATES) : 
-        seriesOfSeries[i] = np.vstack((seriesOfSeries[i], newSeries[i].T))
-        seriesOfVariances[i].extend(newVariances[i])
+    # Align the new series.
+    nxs = nxs.T.reshape((len(data.places), 30, -1))
 
-    with open('series.pkl', 'wb') as fd : 
-        pickle.dump(seriesOfSeries, fd)
+    # Append the series after the lockdown
+    # with before lockdown.
+    xs = [np.vstack([tillLockdown[i][0], nxs[i].T[1:,:]]) for i, _ in enumerate(data.places)]
+    vs = [tillLockdown[i][1] + nvs[i][1:] for i, _ in enumerate(data.places)]
 
-    with open('var.pkl', 'wb') as fd : 
-        pickle.dump(seriesOfVariances, fd)
+    saveOutput()
 
-    state_id = 1
-    for m, datum, series, variance ,state in zip(model.models, data, seriesOfSeries, seriesOfVariances, Model.STATES) : 
-        ks = KalmanSimulator(datum, m, x0)
-        Plot.statePlot(series, variance, state, ks.startDate, 3, datum)
-
-        # outputting into the csv
-        # need to estimate daily values from the timeseries of all the compartments
-
-        deads_daily = np.sum(getAgeMortality(state) * 0.01 * (series[:, 9:12] + series[:, 21:24] + series[:, 24:27]), axis = 1)
-        deads_daily = deads_daily[:-17]
-        deads_daily = np.concatenate([np.zeros(17), deads_daily])
-        deads_total = np.cumsum(deads_daily)
-
-        recovered_total = np.sum(series[:, 27:30], axis = 1)
-        recovered_daily = np.insert(np.diff(recovered_total), 0 , recovered_total[0])
-        recovered_daily = recovered_daily - deads_daily
-        recovered_total = np.cumsum(recovered_daily)
-
-        
-        # also has E + XE for now because they go into recovered too
-        infected_active = np.sum(series[:, 3:6] + series[:, 15:18] + series[:, 6:9] + series[:, 9:12] + series[:, 18:21] + series[:, 21:24] + series[:, 24:27], axis = 1)
-        
-        # if excluding E,Xe, can't compute infected_daily perfectly must settle with a 0.8 factor
-        # infected_active = np.sum(series[:, 6:9] + series[:, 9:12] + series[:, 18:21] + series[:, 21:24] + series[:, 24:27], axis = 1)
-        infected_daily = np.insert(np.diff(infected_active), 0 , infected_active[0])
-        infected_daily = infected_daily + recovered_daily + deads_daily
-
-        #print(deads_daily.shape, recovered_total.shape, recovered_daily.shape, infected_daily.shape)
-        
-
-
-        #Can get some negative terms clipping them to zero
-        infected_daily = infected_daily.clip(min = 0)
-        deads_daily = deads_daily.clip(min = 0)
-        recovered_daily = recovered_daily.clip(min = 0)
-       
-        infected_active = infected_active.clip(min = 0)
-        deads_total =  deads_total.clip(min = 0)
-        recovered_total = recovered_total.clip(min = 0)
-
-        state_ids = np.ones(tEnd - ks.startDate, dtype = int) * int(state_id)
-        df = pd.DataFrame(data = [state_ids, infected_daily, deads_daily, recovered_daily], index = ["State Id", "Number of infected (new)", "Number of Death (New)", "Number of Recovery (New)"])
-        df = df.T
-        
-        df2 = pd.DataFrame(data = [state_ids, infected_active, deads_total, recovered_total], index = ["State id", "Simulated total infected", "Simulated total death", "Simulated total recovery"])
-        df2 = df2.T
-
-
-        datelist = [f'{date.day}/{date.month}/2020' for date in DateIter(ks.startDate, tEnd)]
-        #print(len(datelist), len(infected_active))
-        
-        #print(len(datelist))
-
-        df['Date'] = datelist
-
-        df2['Date'] = datelist
-
-
-        df = df[["State Id", "Date", "Number of infected (new)", "Number of Death (New)", "Number of Recovery (New)"]]
-        df2 = df2[["State id", "Date", "Simulated total infected", "Simulated total death", "Simulated total recovery"]]
-
-        if state_id == 1:
-            DF = df
-            DF2 = df2
-        else:
-            DF = pd.concat([DF, df], ignore_index = True)
-            DF2 = pd.concat([DF2, df2], ignore_index = True)
-
-
-        DF.to_csv('sheet2.csv', index = False) 
-        DF2.to_csv('sheet3.csv', index = False) 
-
-
-
-        state_id = state_id + 1
