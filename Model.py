@@ -216,6 +216,11 @@ class SpaxireAgeStratified () :
         self.beta = b
         self.lockdownLeakiness = ld
 
+    def setTestingFractions(self, tf1, tf2, tf3):
+        self.testingFraction1 = lambda t : tf1
+        self.testingFraction2 = lambda t : tf2
+        self.testingFraction3 = lambda t : tf3
+
     def setStates (self, s, e, a, i, xs, xe, xa, xi, p, r) : 
         self.s  = s
         self.e  = e
@@ -231,11 +236,11 @@ class SpaxireAgeStratified () :
     def addCrossTerms (self, dx, module=np) : 
         ds, de, da, di, dxs, dxe, dxa, dxi, dp, dr = dx.reshape((-1, self.bins))
 
-        ds[1]  += (self.sIn  - self.sOut)
-        de[1]  += (self.eIn  - self.eOut)
-        da[1]  += (self.aIn  - self.aOut)
-        di[1]  += (self.iIn  - self.iOut)
-        dr[1]  += (self.rIn  - self.rOut)
+        ds[1] += (self.sIn  - self.sOut)
+        de[1] += (self.eIn  - self.eOut)
+        da[1] += (self.aIn  - self.aOut)
+        di[1] += (self.iIn  - self.iOut)
+        dr[1] += (self.rIn  - self.rOut)
 
         return cat[module]((ds, de, da, di, dxs, dxe, dxa, dxi, dp, dr))
 

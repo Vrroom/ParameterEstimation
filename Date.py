@@ -19,6 +19,9 @@ class DateIter () :
     def __len__ (self) : 
         return self.end - self.start
 
+    def toList(self):
+        return [x for x in self]
+
 class Date () : 
 
     MONTHS = ['Jan', 'Feb', 'Mar', 

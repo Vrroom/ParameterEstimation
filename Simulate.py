@@ -12,8 +12,12 @@ import pandas as pd
 
 def odeSimulator (model, x0, T) :
     dx = partial(model.dx, module=np)
-    result = odeint(dx, x0, T)
-    return result
+    x = np.zeros((len(T) + 1, len(x0)))
+    x[0, :] = x0
+    for i, t in enumerate(T):
+        x[i + 1, :] = x[i,:] + dx(x[i, :], t)
+        # if i == 0: print(dx(x[i, :], t))
+    return x
 
 def completeSimulator (data, model) : 
 
