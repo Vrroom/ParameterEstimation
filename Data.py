@@ -43,6 +43,15 @@ def getTimeSeriesData (dirPath, place) :
     path = osp.join(dirPath, fname)
     return pd.read_csv(path)
 
+def getBetaAndTestingFractions(filename):
+    file = open(filename)
+    lines = file.readlines()
+    file.close()
+    lines = [line.strip().split(',') for line in lines if len(line.strip()) > 0]
+    betas = {line[0]: [float(line[1]), float(line[2])] for line in lines}
+    testingFractions = {line[0]: [float(line[3]), float(line[4]), float(line[5])] for line in lines}
+    return betas, testingFractions
+
 class Data () : 
     """
     Handle all the data to run the simulations.
@@ -63,6 +72,8 @@ class Data () :
         self.timeSeries = [getTimeSeriesData(self.config['timeSeries'], p) for p in self.places]
         self.ageBins3 = [getAgeBins(self.config['ageBins3'], p) for p in self.places]
         self.mortality = [getAgeMortality(self.config['ageMortality'], self.config['ageBins10'], p) for p in self.places]
+
+        self.betas, self.testingFractions = getBetaAndTestingFractions('Data/beta.csv')
 
         self.placeData = dict()
 

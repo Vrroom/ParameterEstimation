@@ -24,6 +24,14 @@ class ConnectedSpaxire () :
         self.nPlaces = len(data.places)
         self.lockdownEnd = Date('3 May')
 
+    def setBeta(self, betaDict):
+        for i, place in enumerate(self.data.places):
+            self.models[i].setBeta(betaDict[place][0], betaDict[place][1])
+
+    def setTestingFractions(self, testingFractionDict):
+        for i, place in enumerate(self.data.places):
+            self.models[i].setTestingFractions(testingFractionDict[place][0], testingFractionDict[place][1], testingFractionDict[place][2])
+
     def dx (self, x, t, module=np) : 
         xs = x.reshape((self.nPlaces, -1))
         derivatives = [m.dx(x, t, module) for x, m in zip(xs, self.models)]
@@ -217,10 +225,21 @@ class SpaxireAgeStratified () :
         self.lockdownLeakiness = ld
 
     def setTestingFractions(self, tf1, tf2, tf3):
-        self.testingFraction1 = lambda t : tf1
-        self.testingFraction2 = lambda t : tf2
-        self.testingFraction3 = lambda t : tf3
-
+        if type(tf1) not in [int, float]:
+            self.testingFraction1 = tf1
+        else:
+            self.testingFraction1 = lambda t : tf1
+        
+        if type(tf2) not in [int, float]:
+            self.testingFraction1 = tf2
+        else:
+            self.testingFraction1 = lambda t : tf2
+        
+        if type(tf3) not in [int, float]:
+            self.testingFraction1 = tf3
+        else:
+            self.testingFraction1 = lambda t : tf3
+        
     def setStates (self, s, e, a, i, xs, xe, xa, xi, p, r) : 
         self.s  = s
         self.e  = e

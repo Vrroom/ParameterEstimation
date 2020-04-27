@@ -19,7 +19,7 @@ def odeSimulator (model, x0, T) :
         # if i == 0: print(dx(x[i, :], t))
     return x
 
-def completeSimulator (data, model) : 
+def completeSimulator (data, model, changeOnLockdown = None) : 
 
     def saveOutput () : 
 
@@ -146,6 +146,11 @@ def completeSimulator (data, model) :
                 else : 
                     return np.array([])
 
+        ## INIT THINGS IN THE MODEL
+        model.setBeta(data.betas)
+        model.setTestingFractions(data.testingFractions)
+        ###########################
+
         placeIndex = data.places.index(place)
         
         startDate = data.placeData[place]['startDate']
@@ -179,6 +184,8 @@ def completeSimulator (data, model) :
     H = R = Z = lambda t : np.array([])
     tStart = model.lockdownEnd
     tEnd = Date('10 Nov')
+
+    if changeOnLockdown is not None: changeOnLockdown(model, data)
 
     nxs, nvs = dummyKF(model.timeUpdate, x0, P0, Q, H, R, Z, DateIter(tStart, tEnd))
 
