@@ -5,5 +5,8 @@
 	"ageMortality"    : "./Data/ageWiseMortality.csv",
 	"transportMatrix" : "./Data/transportMatrix.csv",
 	"contactHome"     : "./Data/home.csv",
+	"contactWork"     : "./Data/work.csv",
+	"contactOther"     : "./Data/other.csv",
+	"contactSchool"     : "./Data/school.csv",
 	"contactTotal"    : "./Data/total.csv"
 }

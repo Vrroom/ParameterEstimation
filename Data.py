@@ -64,6 +64,8 @@ class Data () :
         transportMatrix = pd.read_csv(self.config['transportMatrix'])
 
         self.contactHome = np.loadtxt(self.config['contactHome'], delimiter=',')
+        self.contactWork = np.loadtxt(self.config['contactWork'], delimiter=',')
+        self.contactOther = np.loadtxt(self.config['contactOther'], delimiter=',')
         self.contactTotal = np.loadtxt(self.config['contactTotal'], delimiter=',')
 
         self.transportMatrix = transportMatrix.iloc[:, 1:].to_numpy()
