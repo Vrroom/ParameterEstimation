@@ -87,8 +87,9 @@ class SpaxireAgeStratified () :
         self.f = 0.2
         self.lockdownLeakiness = 0.7
 
-        self.contactHome  = lambda t : data.contactHome
+        self.contactHome = lambda t : data.contactHome
         self.contactTotal = lambda t : data.contactTotal
+        self.contactNonSchool = lambda t : (data.contactHome + data.contactOther + data.contactWork)
     
         self.bins = 3 # Age bins
         self.adultBins = [1]
@@ -147,12 +148,16 @@ class SpaxireAgeStratified () :
         if module == torch : 
             ct   = torch.from_numpy(self.contactTotal(t))
             ch   = torch.from_numpy(self.contactHome(t))
+            cns  = torch.from_numpy(self.contactNonSchool(t))
         else : 
             ct = self.contactTotal(t)
             ch = self.contactHome(t)
+            cns = self.contactNonSchool(t)
 
         b3 = 0.002 * self.lockdownLeakiness
 
+        # For lockdow, ct is cns (contact no school)
+        if t >= self.tl and t < self.te: ct = cns
         cl  = ct *  self.lockdownLeakiness     + ch * (1.0 - self.lockdownLeakiness)
         cl2 = ct * (self.lockdownLeakiness**2) + ch * (1.0 - self.lockdownLeakiness**2) 
 

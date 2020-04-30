@@ -45,7 +45,6 @@ def betaSearch (data, place, betaRange, ldRange) :
     x0 = np.array(Sbar0 + Ebar0 + Abar0 + Ibar0 + Xsbar0 + Xebar0 + Xabar0 + Xibar0 + Pbar0 + Rbar0)
     model = SpaxireAgeStratified(data, place)
     model.setTestingFractions(*testingRates[place][-3:])
-    model.contactTotal = lambda t: data.contactHome + data.contactWork + data.contactOther # no scool in contact matrix
 
     minLoss, minBeta, minLd = math.inf, None, None
 
