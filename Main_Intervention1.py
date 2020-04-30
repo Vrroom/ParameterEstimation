@@ -32,6 +32,7 @@ def intervention(model, data):
 			[lambda x: climbFn(x, increaseTestingStartDate, increaseTestingEndDate, stateTestingFraction, 0.25 * keralaTestingFraction) \
 				if keralaTestingFraction > stateTestingFraction else stateTestingFraction \
 				for stateTestingFraction, keralaTestingFraction in zip(data.testingFractions[state], keralaTestingFraction)]
+	model.setTestingFractions(newTestingFractions)
 
 if __name__ == "__main__"  : 
     data = Data('./config.json')
