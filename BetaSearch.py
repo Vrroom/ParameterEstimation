@@ -98,5 +98,9 @@ if __name__ == "__main__":
     estimates = refineEstimates(estimates)
     # for state in data.places:
     #     estimates[state].print(state)
+    # If beta values exceed 0.03, cap them
+    for state in data.places:
+        if estimates[state].beta > 0.03:
+            estimates[state].beta = 0.03
     finalDict = {state: [estimates[state].beta, estimates[state].ld] + testingRates[state][-3:] for state in data.places}
     json.dump(finalDict, open('Data/new_beta.json', 'w'))
