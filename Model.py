@@ -69,9 +69,9 @@ class SpaxireAgeStratified () :
 
         self.sigma  = 1 / 5
 
-        self.gamma1 = 1 / 21
-        self.gamma2 = 1 / 21
-        self.gamma3 = 1 / 21
+        self.gamma1 = 1 / 19
+        self.gamma2 = 1 / 22
+        self.gamma3 = 1 / 22
 
         self.beta  = 0.015
         self.beta2 = 0.1
@@ -163,7 +163,7 @@ class SpaxireAgeStratified () :
         # testing rates for presymptomatics, symptomatics and asymptomatics respectively
         # TODO : Ask Sanit what happened to tf2 and why are these values hardcoded
         testFrac1 = 3 * self.testingFraction1(t)/8
-        testFrac2 = (5/3) * (testFrac1/(1-testFrac1))
+        testFrac2 = 5 * self.testingFraction1(t) / (8 - 3 * self.testingFraction1(t)) 
         testFrac3 = self.testingFraction3(t)
 
 
@@ -171,16 +171,16 @@ class SpaxireAgeStratified () :
         de = self.f * lambdaNormal * s \
                 - e * (self.k0(t) \
                     + self.gamma1 \
-                    + testFrac3 * self.gamma1 /(1 - testFrac3)) \
+                    + testFrac3) \
                 + self.mu(t) * xe 
         da = (1 - self.f) * lambdaNormal * s \
                 - a * (self.k0(t) \
                     + self.sigma \
-                    + testFrac1 * self.sigma/(1 - testFrac1)) \
+                    + testFrac1) \
                 + self.mu(t) * xa 
         di = self.sigma * a \
                 - i * (self.k0(t) \
-                    + testFrac2 * self.gamma2 / (1 - testFrac2) \
+                    + testFrac2 \
                     + self.gamma2) \
                 + self.mu(t) * xi 
         dxs = - xs * (lambdaLockdown + self.mu(t)) \
@@ -189,20 +189,20 @@ class SpaxireAgeStratified () :
                 + self.k0(t) * e \
                 - xe * (self.mu(t) \
                     + self.gamma1 \
-                    + testFrac3 * self.gamma1 /(1 - testFrac3))
+                    + testFrac3)
         dxa = (1 - self.f) * lambdaLockdown * xs \
                 - xa * (self.mu(t) \
                     + self.sigma \
-                    + testFrac1 * self.sigma/(1 - testFrac1)) \
+                    + testFrac1) \
                 + self.k0(t) * a 
         dxi = self.sigma * xa \
                 + self.k0(t) * i \
                 - xi * (self.mu(t) \
-                    + testFrac2 * self.gamma2 / (1 - testFrac2) \
+                    + testFrac2 \
                     + self.gamma2)
-        dp = testFrac2 * self.gamma2 / (1 - testFrac2) * (i + xi) \
-                + testFrac1 * self.sigma/(1 - testFrac1) * (a + xa) \
-                + testFrac3 * self.gamma1 /(1 - testFrac3) * (e + xe) \
+        dp = testFrac2 * (i + xi) \
+                + testFrac1 * (a + xa) \
+                + testFrac3 * (e + xe) \
                 - self.gamma3 * p
         dr = self.gamma3 * p \
                 + self.gamma2 * (i + xi) \

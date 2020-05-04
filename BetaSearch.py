@@ -96,6 +96,7 @@ if __name__ == "__main__":
         beta, ld = betaSearch(data, state, betaRange, ldRange)
         estimates[state] = Estimate(beta, ld)
     estimates = refineEstimates(estimates)
-    for state in data.places:
-        estimates[state].print(state)
-    
+    # for state in data.places:
+    #     estimates[state].print(state)
+    finalDict = {state: [estimates[state].beta, estimates[state].ld] + testingRates[state][-3:] for state in data.places}
+    json.dump(finalDict, open('Data.new_beta.json', 'w'))
